@@ -71,6 +71,71 @@
                     <Default>0</Default>
                     <Required>Y</Required>
                 </debug>
+                <!-- AmneziaWG obfuscation [Interface], all empty = plain WireGuard -->
+                <jc type="IntegerField">
+                    <MinimumValue>0</MinimumValue>
+                    <MaximumValue>128</MaximumValue>
+                </jc>
+                <jmin type="IntegerField">
+                    <MinimumValue>0</MinimumValue>
+                    <MaximumValue>1280</MaximumValue>
+                </jmin>
+                <jmax type="IntegerField">
+                    <MinimumValue>0</MinimumValue>
+                    <MaximumValue>1280</MaximumValue>
+                </jmax>
+                <s1 type="IntegerField">
+                    <MinimumValue>0</MinimumValue>
+                    <MaximumValue>65535</MaximumValue>
+                </s1>
+                <s2 type="IntegerField">
+                    <MinimumValue>0</MinimumValue>
+                    <MaximumValue>65535</MaximumValue>
+                </s2>
+                <s3 type="IntegerField">
+                    <MinimumValue>0</MinimumValue>
+                    <MaximumValue>65535</MaximumValue>
+                </s3>
+                <s4 type="IntegerField">
+                    <MinimumValue>0</MinimumValue>
+                    <MaximumValue>65535</MaximumValue>
+                </s4>
+                <h1 type="TextField">
+                    <Mask>/^[0-9]{1,10}(-[0-9]{1,10})?$/</Mask>
+                    <ValidationMessage>Enter a number or a range (e.g. 123456-123999).</ValidationMessage>
+                </h1>
+                <h2 type="TextField">
+                    <Mask>/^[0-9]{1,10}(-[0-9]{1,10})?$/</Mask>
+                    <ValidationMessage>Enter a number or a range (e.g. 123456-123999).</ValidationMessage>
+                </h2>
+                <h3 type="TextField">
+                    <Mask>/^[0-9]{1,10}(-[0-9]{1,10})?$/</Mask>
+                    <ValidationMessage>Enter a number or a range (e.g. 123456-123999).</ValidationMessage>
+                </h3>
+                <h4 type="TextField">
+                    <Mask>/^[0-9]{1,10}(-[0-9]{1,10})?$/</Mask>
+                    <ValidationMessage>Enter a number or a range (e.g. 123456-123999).</ValidationMessage>
+                </h4>
+                <i1 type="TextField">
+                    <Mask>/^( *&lt;(b 0x[0-9a-fA-F]+|r [0-9]+|rc [0-9]+|rd [0-9]+|t)&gt;)+ *$/</Mask>
+                    <ValidationMessage>Use CPS tags: &lt;b 0x..&gt; &lt;r N&gt; &lt;rc N&gt; &lt;rd N&gt; &lt;t&gt;.</ValidationMessage>
+                </i1>
+                <i2 type="TextField">
+                    <Mask>/^( *&lt;(b 0x[0-9a-fA-F]+|r [0-9]+|rc [0-9]+|rd [0-9]+|t)&gt;)+ *$/</Mask>
+                    <ValidationMessage>Use CPS tags: &lt;b 0x..&gt; &lt;r N&gt; &lt;rc N&gt; &lt;rd N&gt; &lt;t&gt;.</ValidationMessage>
+                </i2>
+                <i3 type="TextField">
+                    <Mask>/^( *&lt;(b 0x[0-9a-fA-F]+|r [0-9]+|rc [0-9]+|rd [0-9]+|t)&gt;)+ *$/</Mask>
+                    <ValidationMessage>Use CPS tags: &lt;b 0x..&gt; &lt;r N&gt; &lt;rc N&gt; &lt;rd N&gt; &lt;t&gt;.</ValidationMessage>
+                </i3>
+                <i4 type="TextField">
+                    <Mask>/^( *&lt;(b 0x[0-9a-fA-F]+|r [0-9]+|rc [0-9]+|rd [0-9]+|t)&gt;)+ *$/</Mask>
+                    <ValidationMessage>Use CPS tags: &lt;b 0x..&gt; &lt;r N&gt; &lt;rc N&gt; &lt;rd N&gt; &lt;t&gt;.</ValidationMessage>
+                </i4>
+                <i5 type="TextField">
+                    <Mask>/^( *&lt;(b 0x[0-9a-fA-F]+|r [0-9]+|rc [0-9]+|rd [0-9]+|t)&gt;)+ *$/</Mask>
+                    <ValidationMessage>Use CPS tags: &lt;b 0x..&gt; &lt;r N&gt; &lt;rc N&gt; &lt;rd N&gt; &lt;t&gt;.</ValidationMessage>
+                </i5>
                 <cnfFilename type="TextField" volatile="true"/>
                 <statFilename type="TextField" volatile="true"/>
                 <interface type="TextField" volatile="true"/>
