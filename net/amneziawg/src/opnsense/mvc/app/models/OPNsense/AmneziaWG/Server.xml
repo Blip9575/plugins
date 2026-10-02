@@ -132,23 +132,23 @@
                 </h4>
                 <i1 type="TextField">
                     <Mask>/^( *&lt;(b 0x([0-9a-fA-F]{2})+|r [0-9]+|rc [0-9]+|rd [0-9]+|t|c)&gt;)+ *$/</Mask>
-                    <ValidationMessage>Use CPS tags: &lt;b 0x..&gt; (even number of hex digits) &lt;r N&gt; &lt;rc N&gt; &lt;rd N&gt; &lt;t&gt; &lt;c&gt;.</ValidationMessage>
+                    <ValidationMessage>Use CPS tags written in angle brackets: b 0x.. (an even number of hex digits), r N, rc N, rd N, t or c.</ValidationMessage>
                 </i1>
                 <i2 type="TextField">
                     <Mask>/^( *&lt;(b 0x([0-9a-fA-F]{2})+|r [0-9]+|rc [0-9]+|rd [0-9]+|t|c)&gt;)+ *$/</Mask>
-                    <ValidationMessage>Use CPS tags: &lt;b 0x..&gt; (even number of hex digits) &lt;r N&gt; &lt;rc N&gt; &lt;rd N&gt; &lt;t&gt; &lt;c&gt;.</ValidationMessage>
+                    <ValidationMessage>Use CPS tags written in angle brackets: b 0x.. (an even number of hex digits), r N, rc N, rd N, t or c.</ValidationMessage>
                 </i2>
                 <i3 type="TextField">
                     <Mask>/^( *&lt;(b 0x([0-9a-fA-F]{2})+|r [0-9]+|rc [0-9]+|rd [0-9]+|t|c)&gt;)+ *$/</Mask>
-                    <ValidationMessage>Use CPS tags: &lt;b 0x..&gt; (even number of hex digits) &lt;r N&gt; &lt;rc N&gt; &lt;rd N&gt; &lt;t&gt; &lt;c&gt;.</ValidationMessage>
+                    <ValidationMessage>Use CPS tags written in angle brackets: b 0x.. (an even number of hex digits), r N, rc N, rd N, t or c.</ValidationMessage>
                 </i3>
                 <i4 type="TextField">
                     <Mask>/^( *&lt;(b 0x([0-9a-fA-F]{2})+|r [0-9]+|rc [0-9]+|rd [0-9]+|t|c)&gt;)+ *$/</Mask>
-                    <ValidationMessage>Use CPS tags: &lt;b 0x..&gt; (even number of hex digits) &lt;r N&gt; &lt;rc N&gt; &lt;rd N&gt; &lt;t&gt; &lt;c&gt;.</ValidationMessage>
+                    <ValidationMessage>Use CPS tags written in angle brackets: b 0x.. (an even number of hex digits), r N, rc N, rd N, t or c.</ValidationMessage>
                 </i4>
                 <i5 type="TextField">
                     <Mask>/^( *&lt;(b 0x([0-9a-fA-F]{2})+|r [0-9]+|rc [0-9]+|rd [0-9]+|t|c)&gt;)+ *$/</Mask>
-                    <ValidationMessage>Use CPS tags: &lt;b 0x..&gt; (even number of hex digits) &lt;r N&gt; &lt;rc N&gt; &lt;rd N&gt; &lt;t&gt; &lt;c&gt;.</ValidationMessage>
+                    <ValidationMessage>Use CPS tags written in angle brackets: b 0x.. (an even number of hex digits), r N, rc N, rd N, t or c.</ValidationMessage>
                 </i5>
                 <!-- AmneziaWG 3.x [Interface], all optional -->
                 <headerprotectionkey type="Base64Field"/>

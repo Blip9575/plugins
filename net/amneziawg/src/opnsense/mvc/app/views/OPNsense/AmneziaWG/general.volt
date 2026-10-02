@@ -121,7 +121,8 @@
             ajaxGet("/api/amneziawg/server/gen_params/" + profile, {}, function (data, status) {
                 if (data.status && data.status === 'ok') {
                     $.each(data.params, function (field, value) {
-                        $("#server\\." + field).val(value);
+                        /* the response is HTML escaped for the browser, I1 contains angle brackets */
+                        $("#server\\." + field).val(htmlDecode(value));
                     });
                 }
             });
@@ -169,7 +170,7 @@
                 rows.push('MTU = ' + data.mtu);
             }
             $.each(data.awg || {}, function (key, value) {
-                rows.push(key + ' = ' + value);
+                rows.push(key + ' = ' + htmlDecode(value));
             });
             rows.push('');
             rows.push('[Peer]');
