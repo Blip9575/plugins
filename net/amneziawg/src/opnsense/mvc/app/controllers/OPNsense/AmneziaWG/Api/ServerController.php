@@ -31,6 +31,7 @@ namespace OPNsense\AmneziaWG\Api;
 
 use OPNsense\Base\ApiMutableModelControllerBase;
 use OPNsense\Core\Backend;
+use OPNsense\AmneziaWG\ParamGenerator;
 
 class ServerController extends ApiMutableModelControllerBase
 {
@@ -40,6 +41,14 @@ class ServerController extends ApiMutableModelControllerBase
     public function keyPairAction()
     {
         return json_decode((new Backend())->configdRun('amneziawg gen_keypair'), true);
+    }
+
+    /**
+     * new random AmneziaWG 2.0 obfuscation parameters, the instance dialog fills them in
+     */
+    public function genParamsAction()
+    {
+        return ['status' => 'ok', 'params' => ParamGenerator::awg2()];
     }
 
     public function searchServerAction()

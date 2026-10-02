@@ -101,6 +101,27 @@
          * Move keypair generation button inside the instance form and hook api event
          */
         $("#control_label_server\\.pubkey").append($("#keygen_div").detach().show());
+        /**
+         * Parameter generator in the AmneziaWG 2.0 header of the instance dialog. Replaces Jc, Jmin, Jmax, S1-S4 and
+         * H1-H4 with a new random profile and clears I1-I5, nothing is saved before the dialog is saved.
+         */
+        $("#{{ formGridAmneziaWGServer['edit_dialog_id'] }} thead b").filter(function () {
+            return $(this).text().trim() === 'AmneziaWG 2.0';
+        }).closest('div').append($("#awg2gen_div").detach().show());
+        $("#awg2gen").click(function (event) {
+            event.stopPropagation(); /* do not fold the section */
+            const $header = $(this).closest('thead');
+            ajaxGet("/api/amneziawg/server/gen_params", {}, function (data, status) {
+                if (data.status && data.status === 'ok') {
+                    $.each(data.params, function (field, value) {
+                        $("#server\\." + field).val(value);
+                    });
+                    if ($header.next('tbody').is(':hidden')) {
+                        $header.click(); /* show the new values */
+                    }
+                }
+            });
+        });
         $("#keygen").click(function(){
             ajaxGet("/api/amneziawg/server/key_pair", {}, function(data, status){
                 if (data.status && data.status === 'ok') {
@@ -431,6 +452,11 @@
     <div id="instances" class="tab-pane fade in active">
         <span id="keygen_div" style="display:none" class="pull-right">
             <button id="keygen" type="button" class="btn btn-secondary" title="{{ lang._('Generate new keypair.') }}" data-toggle="tooltip">
+              <i class="fa fa-fw fa-gear"></i>
+            </button>
+        </span>
+        <span id="awg2gen_div" style="display:none" class="pull-right">
+            <button id="awg2gen" type="button" class="btn btn-secondary btn-xs" title="{{ lang._('Generate a new random AmneziaWG 2.0 profile. This replaces Jc, Jmin, Jmax, S1-S4 and H1-H4 and clears I1-I5.') }}" data-toggle="tooltip">
               <i class="fa fa-fw fa-gear"></i>
             </button>
         </span>
