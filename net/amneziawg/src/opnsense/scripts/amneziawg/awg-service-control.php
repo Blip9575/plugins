@@ -173,10 +173,15 @@ function wg_reconfigure_hash($server)
     }
     return md5(
         sprintf(
-            '%s|%s|%s',
+            '%s|%s|%s|%s',
             $server->tunneladdress,
             $server->mtu,
-            $server->gateway
+            $server->gateway,
+            // header and prefix changes are not applied by syncconf on a live tunnel, restart instead
+            implode(',', [
+                $server->s1, $server->s2, $server->s3, $server->s4,
+                $server->h1, $server->h2, $server->h3, $server->h4
+            ])
         )
     );
 }
