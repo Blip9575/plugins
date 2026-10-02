@@ -132,6 +132,166 @@
     </field>
     <field>
         <type>header</type>
+        <label>Obfuscation</label>
+        <collapse>true</collapse>
+    </field>
+    <field>
+        <id>server.jc</id>
+        <label>Junk packet count (Jc)</label>
+        <type>text</type>
+        <help>Junk packets sent before each handshake. Leave all obfuscation fields empty for plain WireGuard compatibility.</help>
+        <grid_view>
+            <visible>false</visible>
+        </grid_view>
+    </field>
+    <field>
+        <id>server.jmin</id>
+        <label>Junk packet minimum size (Jmin)</label>
+        <type>text</type>
+        <help>Minimum size of a junk packet, must not exceed Jmax.</help>
+        <grid_view>
+            <visible>false</visible>
+        </grid_view>
+    </field>
+    <field>
+        <id>server.jmax</id>
+        <label>Junk packet maximum size (Jmax)</label>
+        <type>text</type>
+        <help>Maximum size of a junk packet.</help>
+        <grid_view>
+            <visible>false</visible>
+        </grid_view>
+    </field>
+    <field>
+        <id>server.s1</id>
+        <label>Init packet prefix (S1)</label>
+        <type>text</type>
+        <help>Random prefix length of handshake initiation packets. Must match on both ends.</help>
+        <grid_view>
+            <visible>false</visible>
+        </grid_view>
+    </field>
+    <field>
+        <id>server.s2</id>
+        <label>Response packet prefix (S2)</label>
+        <type>text</type>
+        <help>Random prefix length of handshake response packets. Must match on both ends. S1 + 56 must not equal S2.</help>
+        <grid_view>
+            <visible>false</visible>
+        </grid_view>
+    </field>
+    <field>
+        <id>server.s3</id>
+        <label>Cookie padding (S3)</label>
+        <type>text</type>
+        <advanced>true</advanced>
+        <help>Random prefix length of cookie reply packets. Must match on both ends.</help>
+        <grid_view>
+            <visible>false</visible>
+        </grid_view>
+    </field>
+    <field>
+        <id>server.s4</id>
+        <label>Transport padding (S4)</label>
+        <type>text</type>
+        <advanced>true</advanced>
+        <help>Random prefix length of transport data packets. Must match on both ends.</help>
+        <grid_view>
+            <visible>false</visible>
+        </grid_view>
+    </field>
+    <field>
+        <id>server.h1</id>
+        <label>Header initiation (H1)</label>
+        <type>text</type>
+        <advanced>true</advanced>
+        <help>Number or range a-b. Must match on both ends. Ranges must not overlap. Set all four or none.</help>
+        <grid_view>
+            <visible>false</visible>
+        </grid_view>
+    </field>
+    <field>
+        <id>server.h2</id>
+        <label>Header response (H2)</label>
+        <type>text</type>
+        <advanced>true</advanced>
+        <help>Number or range a-b. Must match on both ends. Ranges must not overlap. Set all four or none.</help>
+        <grid_view>
+            <visible>false</visible>
+        </grid_view>
+    </field>
+    <field>
+        <id>server.h3</id>
+        <label>Header cookie reply (H3)</label>
+        <type>text</type>
+        <advanced>true</advanced>
+        <help>Number or range a-b. Must match on both ends. Ranges must not overlap. Set all four or none.</help>
+        <grid_view>
+            <visible>false</visible>
+        </grid_view>
+    </field>
+    <field>
+        <id>server.h4</id>
+        <label>Header transport (H4)</label>
+        <type>text</type>
+        <advanced>true</advanced>
+        <help>Number or range a-b. Must match on both ends. Ranges must not overlap. Set all four or none.</help>
+        <grid_view>
+            <visible>false</visible>
+        </grid_view>
+    </field>
+    <field>
+        <id>server.i1</id>
+        <label>Signature packet I1</label>
+        <type>textbox</type>
+        <advanced>true</advanced>
+        <help>CPS chain, e.g. &lt;b 0x...&gt;&lt;r 32&gt;&lt;t&gt;. Sent before the handshake.</help>
+        <grid_view>
+            <visible>false</visible>
+        </grid_view>
+    </field>
+    <field>
+        <id>server.i2</id>
+        <label>Signature packet I2</label>
+        <type>textbox</type>
+        <advanced>true</advanced>
+        <help>CPS chain, e.g. &lt;b 0x...&gt;&lt;r 32&gt;&lt;t&gt;. Sent before the handshake.</help>
+        <grid_view>
+            <visible>false</visible>
+        </grid_view>
+    </field>
+    <field>
+        <id>server.i3</id>
+        <label>Signature packet I3</label>
+        <type>textbox</type>
+        <advanced>true</advanced>
+        <help>CPS chain, e.g. &lt;b 0x...&gt;&lt;r 32&gt;&lt;t&gt;. Sent before the handshake.</help>
+        <grid_view>
+            <visible>false</visible>
+        </grid_view>
+    </field>
+    <field>
+        <id>server.i4</id>
+        <label>Signature packet I4</label>
+        <type>textbox</type>
+        <advanced>true</advanced>
+        <help>CPS chain, e.g. &lt;b 0x...&gt;&lt;r 32&gt;&lt;t&gt;. Sent before the handshake.</help>
+        <grid_view>
+            <visible>false</visible>
+        </grid_view>
+    </field>
+    <field>
+        <id>server.i5</id>
+        <label>Signature packet I5</label>
+        <type>textbox</type>
+        <advanced>true</advanced>
+        <help>CPS chain, e.g. &lt;b 0x...&gt;&lt;r 32&gt;&lt;t&gt;. Sent before the handshake.</help>
+        <grid_view>
+            <visible>false</visible>
+        </grid_view>
+    </field>
+    <field>
+        <type>header</type>
         <label>Peer generator</label>
         <collapse>true</collapse>
     </field>

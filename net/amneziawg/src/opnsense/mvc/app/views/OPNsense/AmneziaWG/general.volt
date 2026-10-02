@@ -143,6 +143,11 @@
             if (data.mtu) {
                 rows.push('MTU = ' + data.mtu);
             }
+            $.each(data.awg || {}, function (key, value) {
+                if (value !== '') {
+                    rows.push((key[0] === 'j' ? key[0].toUpperCase() + key.slice(1) : key.toUpperCase()) + ' = ' + value);
+                }
+            });
             rows.push('');
             rows.push('[Peer]');
             rows.push('PublicKey = ' + data.pubkey);
@@ -180,7 +185,8 @@
                         .val(data.endpoint)
                         .data('org-value', data.endpoint)
                         .data('mtu', data.mtu)
-                        .data('pubkey', data.pubkey);
+                        .data('pubkey', data.pubkey)
+                        .data('awg', data.awg);
 
                     const allowed_ips_value = data.allowed_ips || "0.0.0.0/0,::/0";
                     allowed_ips
@@ -358,6 +364,7 @@
                 peer_dns: $("#configbuilder\\.peer_dns").val(),
                 mtu: $("#configbuilder\\.endpoint").data('mtu'),
                 pubkey: $("#configbuilder\\.endpoint").data('pubkey'),
+                awg: $("#configbuilder\\.endpoint").data('awg'),
                 psk: $("#configbuilder\\.psk").val(),
                 endpoint: $("#configbuilder\\.endpoint").val(),
                 allowedips: $("#configbuilder\\.tunneladdress").val(),

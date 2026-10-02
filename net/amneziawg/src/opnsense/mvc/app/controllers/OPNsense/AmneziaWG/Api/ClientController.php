@@ -185,6 +185,9 @@ class ClientController extends ApiMutableModelControllerBase
                     $result['allowed_ips'] = (string)$node->allowed_ips;
                     $result['mtu'] = (string)$node->mtu;
                     $result['pubkey'] = (string)$node->pubkey;
+                    foreach (['jc', 'jmin', 'jmax', 's1', 's2', 's3', 's4', 'h1', 'h2', 'h3', 'h4', 'i1', 'i2', 'i3', 'i4', 'i5'] as $field) {
+                        $result['awg'][$field] = (string)$node->$field;
+                    }
                     foreach (array_filter(explode(',', (string)$node->tunneladdress)) as $addr) {
                         $proto = str_contains($addr, ':') ? 'inet6' : 'inet';
                         if (!isset($subnets[$proto])) {
