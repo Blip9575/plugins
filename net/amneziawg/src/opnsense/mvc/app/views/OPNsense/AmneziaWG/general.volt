@@ -144,9 +144,7 @@
                 rows.push('MTU = ' + data.mtu);
             }
             $.each(data.awg || {}, function (key, value) {
-                if (value !== '') {
-                    rows.push((key[0] === 'j' ? key[0].toUpperCase() + key.slice(1) : key.toUpperCase()) + ' = ' + value);
-                }
+                rows.push(key + ' = ' + value);
             });
             rows.push('');
             rows.push('[Peer]');

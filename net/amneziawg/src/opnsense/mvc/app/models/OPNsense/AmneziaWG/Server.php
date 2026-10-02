@@ -46,42 +46,29 @@ class Server extends BaseModel
             }
             $key = $node->__reference;
 
-            /* junk packet sizes */
-            if ((string)$node->jmin !== '' && (string)$node->jmax !== '' && (int)(string)$node->jmin > (int)(string)$node->jmax) {
-                $messages->appendMessage(new Message(gettext('Jmin must not be larger than Jmax.'), $key . '.jmin'));
-            }
-            if ((int)(string)$node->jc > 0 && (int)(string)$node->jmax === 0) {
-                $messages->appendMessage(new Message(gettext('Jmax is required when Jc is set.'), $key . '.jmax'));
-            }
-
-            /* init and response packets must differ in size */
+            /* junk packet sizes, documented as Jmin < Jmax */
             if (
-                (string)$node->s1 !== '' && (string)$node->s2 !== '' &&
-                (int)(string)$node->s1 + 56 === (int)(string)$node->s2
+                (string)$node->jmin !== '' && (string)$node->jmax !== '' &&
+                (int)(string)$node->jmax > 0 && (int)(string)$node->jmin >= (int)(string)$node->jmax
             ) {
-                $messages->appendMessage(new Message(gettext('S1 + 56 must not equal S2.'), $key . '.s2'));
+                $messages->appendMessage(new Message(gettext('Jmin must be smaller than Jmax.'), $key . '.jmin'));
             }
 
-            /* message type headers: all or none, valid ranges, no overlaps */
+            /* message type headers: 5 to 4294967295 as documented in awg(8), ranges must not overlap */
             $ranges = [];
-            $set = 0;
             foreach (['h1', 'h2', 'h3', 'h4'] as $field) {
                 $value = (string)$node->$field;
                 if ($value === '') {
                     continue;
                 }
-                $set++;
                 $parts = explode('-', $value);
                 $lo = (int)$parts[0];
                 $hi = (int)end($parts);
-                if ($lo > $hi || $hi > 4294967295) {
-                    $messages->appendMessage(new Message(gettext('Invalid range, start must not exceed end and both must fit 32 bits.'), $key . '.' . $field));
+                if ($lo < 5 || $lo > $hi || $hi > 4294967295) {
+                    $messages->appendMessage(new Message(gettext('Invalid value, use a number or range from 5 to 4294967295, the start must not exceed the end.'), $key . '.' . $field));
                     continue;
                 }
                 $ranges[$field] = [$lo, $hi];
-            }
-            if ($set > 0 && $set < 4) {
-                $messages->appendMessage(new Message(gettext('Set either all of H1-H4 or none of them.'), $key . '.h1'));
             }
             $names = array_keys($ranges);
             foreach ($names as $idx => $a) {
@@ -96,6 +83,10 @@ class Server extends BaseModel
             foreach (['i1', 'i2', 'i3', 'i4', 'i5'] as $field) {
                 if (strlen((string)$node->$field) > 4096) {
                     $messages->appendMessage(new Message(gettext('Value must not exceed 4096 characters.'), $key . '.' . $field));
+                }
+                /* documented limit for the random byte tags <r N>, <rc N> and <rd N> */
+                if (preg_match_all('/<(?:r|rc|rd) ([0-9]+)>/', (string)$node->$field, $tags) && max($tags[1]) > 1000) {
+                    $messages->appendMessage(new Message(gettext('Random byte tags must not exceed 1000.'), $key . '.' . $field));
                 }
             }
         }

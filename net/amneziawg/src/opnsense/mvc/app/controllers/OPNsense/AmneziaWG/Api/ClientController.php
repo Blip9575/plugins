@@ -185,8 +185,17 @@ class ClientController extends ApiMutableModelControllerBase
                     $result['allowed_ips'] = (string)$node->allowed_ips;
                     $result['mtu'] = (string)$node->mtu;
                     $result['pubkey'] = (string)$node->pubkey;
-                    foreach (['jc', 'jmin', 'jmax', 's1', 's2', 's3', 's4', 'h1', 'h2', 'h3', 'h4', 'i1', 'i2', 'i3', 'i4', 'i5'] as $field) {
-                        $result['awg'][$field] = (string)$node->$field;
+                    /* config key => value, only for the options that are set */
+                    $result['awg'] = [];
+                    foreach (
+                        ['jc' => 'Jc', 'jmin' => 'Jmin', 'jmax' => 'Jmax', 's1' => 'S1', 's2' => 'S2', 's3' => 'S3',
+                         's4' => 'S4', 'h1' => 'H1', 'h2' => 'H2', 'h3' => 'H3', 'h4' => 'H4', 'i1' => 'I1',
+                         'i2' => 'I2', 'i3' => 'I3', 'i4' => 'I4', 'i5' => 'I5'
+                        ] as $field => $name
+                    ) {
+                        if ((string)$node->$field !== '') {
+                            $result['awg'][$name] = (string)$node->$field;
+                        }
                     }
                     foreach (array_filter(explode(',', (string)$node->tunneladdress)) as $addr) {
                         $proto = str_contains($addr, ':') ? 'inet6' : 'inet';
