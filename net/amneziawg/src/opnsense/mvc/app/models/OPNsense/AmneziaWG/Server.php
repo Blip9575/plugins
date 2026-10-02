@@ -65,7 +65,10 @@ class Server extends BaseModel
                 $lo = (int)$parts[0];
                 $hi = (int)end($parts);
                 if ($lo < 5 || $lo > $hi || $hi > 4294967295) {
-                    $messages->appendMessage(new Message(gettext('Invalid value, use a number or range from 5 to 4294967295, the start must not exceed the end.'), $key . '.' . $field));
+                    $messages->appendMessage(new Message(
+                        gettext('Use a number or range from 5 to 4294967295, the start must not exceed the end.'),
+                        $key . '.' . $field
+                    ));
                     continue;
                 }
                 $ranges[$field] = [$lo, $hi];
@@ -74,7 +77,10 @@ class Server extends BaseModel
             foreach ($names as $idx => $a) {
                 foreach (array_slice($names, $idx + 1) as $b) {
                     if ($ranges[$a][0] <= $ranges[$b][1] && $ranges[$b][0] <= $ranges[$a][1]) {
-                        $messages->appendMessage(new Message(gettext('Header ranges must not overlap.'), $key . '.' . $b));
+                        $messages->appendMessage(new Message(
+                            gettext('Header ranges must not overlap.'),
+                            $key . '.' . $b
+                        ));
                     }
                 }
             }
@@ -83,11 +89,17 @@ class Server extends BaseModel
             $hpk = (string)$node->headerprotectionkey;
             if ($hpk !== '') {
                 if (strlen(base64_decode($hpk, true) ?: '') !== 32) {
-                    $messages->appendMessage(new Message(gettext('The header protection key must be a 32 byte base64 key.'), $key . '.headerprotectionkey'));
+                    $messages->appendMessage(new Message(
+                        gettext('The header protection key must be a 32 byte base64 key.'),
+                        $key . '.headerprotectionkey'
+                    ));
                 }
                 foreach (['s1', 's2', 's3', 's4'] as $field) {
                     if ((int)(string)$node->$field < 12) {
-                        $messages->appendMessage(new Message(gettext('S1-S4 must be at least 12 when header protection is used.'), $key . '.' . $field));
+                        $messages->appendMessage(new Message(
+                            gettext('S1-S4 must be at least 12 when header protection is used.'),
+                            $key . '.' . $field
+                        ));
                     }
                 }
             }
@@ -103,18 +115,27 @@ class Server extends BaseModel
                 }
                 $parts = explode('-', $value);
                 if ((int)$parts[0] > (int)end($parts) || (int)end($parts) > 65535) {
-                    $messages->appendMessage(new Message(gettext('Invalid range, start must not exceed end and both must be at most 65535.'), $key . '.' . $field));
+                    $messages->appendMessage(new Message(
+                        gettext('Invalid range, start must not exceed end and both must be at most 65535.'),
+                        $key . '.' . $field
+                    ));
                 }
             }
 
             /* signature packets, kernel limit for AWG strings is 4096 */
             foreach (['i1', 'i2', 'i3', 'i4', 'i5'] as $field) {
                 if (strlen((string)$node->$field) > 4096) {
-                    $messages->appendMessage(new Message(gettext('Value must not exceed 4096 characters.'), $key . '.' . $field));
+                    $messages->appendMessage(new Message(
+                        gettext('Value must not exceed 4096 characters.'),
+                        $key . '.' . $field
+                    ));
                 }
                 /* documented limit for the random byte tags <r N>, <rc N> and <rd N> */
                 if (preg_match_all('/<(?:r|rc|rd) ([0-9]+)>/', (string)$node->$field, $tags) && max($tags[1]) > 1000) {
-                    $messages->appendMessage(new Message(gettext('Random byte tags must not exceed 1000.'), $key . '.' . $field));
+                    $messages->appendMessage(new Message(
+                        gettext('Random byte tags must not exceed 1000.'),
+                        $key . '.' . $field
+                    ));
                 }
             }
         }

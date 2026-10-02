@@ -201,7 +201,9 @@ class ClientController extends ApiMutableModelControllerBase
                             $result['awg'][$name] = (string)$node->$field;
                         }
                     }
-                    foreach (['randomtrailers' => 'RandomTrailers', 'disablecookies' => 'DisableCookies'] as $field => $name) {
+                    foreach (
+                        ['randomtrailers' => 'RandomTrailers', 'disablecookies' => 'DisableCookies'] as $field => $name
+                    ) {
                         if ((string)$node->$field === '1') {
                             $result['awg'][$name] = 'on';
                         }
