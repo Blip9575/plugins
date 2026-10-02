@@ -26,7 +26,7 @@
  * POSSIBILITY OF SUCH DAMAGE.
  */
 
-namespace OPNsense\Wireguard\FieldTypes;
+namespace OPNsense\AmneziaWG\FieldTypes;
 
 use OPNsense\Base\FieldTypes\ArrayField;
 use OPNsense\Base\FieldTypes\TextField;
@@ -40,9 +40,9 @@ class ServerField extends ArrayField
     {
         foreach ($this->internalChildnodes as $node) {
             if (!$node->getInternalIsVirtual()) {
-                $node->cnfFilename = "/usr/local/etc/wireguard/wg{$node->instance}.conf";
-                $node->statFilename = "/usr/local/etc/wireguard/wg{$node->instance}.stat";
-                $node->interface = "wg{$node->instance}";
+                $node->cnfFilename = "/usr/local/etc/amneziawg/awg{$node->instance}.conf";
+                $node->statFilename = "/usr/local/etc/amneziawg/awg{$node->instance}.stat";
+                $node->interface = "awg{$node->instance}";
             }
         }
         return parent::actionPostLoadingEvent();

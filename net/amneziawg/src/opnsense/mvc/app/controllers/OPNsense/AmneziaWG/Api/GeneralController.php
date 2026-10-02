@@ -27,12 +27,12 @@
  * POSSIBILITY OF SUCH DAMAGE.
  */
 
-namespace OPNsense\Wireguard\Api;
+namespace OPNsense\AmneziaWG\Api;
 
 use OPNsense\Base\ApiMutableModelControllerBase;
 
 class GeneralController extends ApiMutableModelControllerBase
 {
-    protected static $internalModelClass = '\OPNsense\Wireguard\General';
+    protected static $internalModelClass = '\OPNsense\AmneziaWG\General';
     protected static $internalModelName = 'general';
 }

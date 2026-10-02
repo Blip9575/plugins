@@ -27,23 +27,23 @@
  * POSSIBILITY OF SUCH DAMAGE.
  */
 
-namespace OPNsense\Wireguard\Api;
+namespace OPNsense\AmneziaWG\Api;
 
 use OPNsense\Base\ApiMutableServiceControllerBase;
 use OPNsense\Core\Backend;
-use OPNsense\Wireguard\Client;
-use OPNsense\Wireguard\Server;
+use OPNsense\AmneziaWG\Client;
+use OPNsense\AmneziaWG\Server;
 
 /**
  * Class ServiceController
- * @package OPNsense\Wireguard
+ * @package OPNsense\AmneziaWG
  */
 class ServiceController extends ApiMutableServiceControllerBase
 {
-    protected static $internalServiceClass = '\OPNsense\Wireguard\General';
-    protected static $internalServiceTemplate = 'OPNsense/Wireguard';
+    protected static $internalServiceClass = '\OPNsense\AmneziaWG\General';
+    protected static $internalServiceTemplate = 'OPNsense/AmneziaWG';
     protected static $internalServiceEnabled = 'enabled';
-    protected static $internalServiceName = 'wireguard';
+    protected static $internalServiceName = 'amneziawg';
 
     /**
      * @return array
@@ -57,18 +57,18 @@ class ServiceController extends ApiMutableServiceControllerBase
         $backend = new Backend();
         $this->runInterfaceRegistration();
         $backend->configdRun('template reload ' . escapeshellarg(static::$internalServiceTemplate));
-        $backend->configdpRun('wireguard configure');
+        $backend->configdpRun('amneziawg configure');
 
         return ['result' => 'ok'];
     }
 
     /**
-     * wg show all dump output
+     * awg show all dump output
      * @return array
      */
     public function showAction()
     {
-        $payload = json_decode((new Backend())->configdRun('wireguard show'), true);
+        $payload = json_decode((new Backend())->configdRun('amneziawg show'), true);
         $records = !empty($payload) && !empty($payload['records']) ? $payload['records'] : [];
         $key_descriptions = []; /* descriptions per interface + pub-key */
         $ifnames = []; /* interface / instance names */

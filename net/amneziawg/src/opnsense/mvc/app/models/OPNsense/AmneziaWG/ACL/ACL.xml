@@ -1,26 +1,26 @@
 <acl>
-   <page-wireguard-config>
-      <name>VPN: WireGuard: Configuration</name>
+   <page-amneziawg-config>
+      <name>VPN: AmneziaWG: Configuration</name>
       <patterns>
-         <pattern>ui/wireguard/*</pattern>
-         <pattern>api/wireguard/server/*</pattern>
-         <pattern>api/wireguard/client/*</pattern>
-         <pattern>api/wireguard/general/*</pattern>
-         <pattern>api/wireguard/service/*</pattern>
+         <pattern>ui/amneziawg/*</pattern>
+         <pattern>api/amneziawg/server/*</pattern>
+         <pattern>api/amneziawg/client/*</pattern>
+         <pattern>api/amneziawg/general/*</pattern>
+         <pattern>api/amneziawg/service/*</pattern>
       </patterns>
-   </page-wireguard-config>
-   <page-wireguard-diagnostics>
-      <name>VPN: WireGuard: Status</name>
+   </page-amneziawg-config>
+   <page-amneziawg-diagnostics>
+      <name>VPN: AmneziaWG: Status</name>
       <patterns>
-         <pattern>ui/wireguard/diagnostics/*</pattern>
-         <pattern>api/wireguard/service/*</pattern>
+         <pattern>ui/amneziawg/diagnostics/*</pattern>
+         <pattern>api/amneziawg/service/*</pattern>
       </patterns>
-   </page-wireguard-diagnostics>
-   <page-wireguard-logs>
-      <name>VPN: WireGuard: Log</name>
+   </page-amneziawg-diagnostics>
+   <page-amneziawg-logs>
+      <name>VPN: AmneziaWG: Log</name>
       <patterns>
-         <pattern>ui/diagnostics/log/core/wireguard/*</pattern>
-         <pattern>api/diagnostics/log/core/wireguard/*</pattern>
+         <pattern>ui/diagnostics/log/core/amneziawg/*</pattern>
+         <pattern>api/diagnostics/log/core/amneziawg/*</pattern>
       </patterns>
-   </page-wireguard-logs>
+   </page-amneziawg-logs>
 </acl>

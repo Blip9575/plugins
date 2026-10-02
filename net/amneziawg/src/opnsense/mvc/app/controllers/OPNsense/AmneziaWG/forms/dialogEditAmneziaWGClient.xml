@@ -24,7 +24,7 @@
         <id>client.pubkey</id>
         <label>Public key</label>
         <type>text</type>
-        <help>Public key of this peer. You can generate the key using the private key piped to "wg pubkey".</help>
+        <help>Public key of this peer. You can generate the key using the private key piped to "awg pubkey".</help>
         <grid_view>
             <visible>false</visible>
         </grid_view>
@@ -33,7 +33,7 @@
         <id>client.psk</id>
         <label>Pre-shared key</label>
         <type>text</type>
-        <help>Shared secret (PSK) for this peer. You can generate a key using "wg genpsk".</help>
+        <help>Shared secret (PSK) for this peer. You can generate a key using "awg genpsk".</help>
         <grid_view>
             <visible>false</visible>
         </grid_view>

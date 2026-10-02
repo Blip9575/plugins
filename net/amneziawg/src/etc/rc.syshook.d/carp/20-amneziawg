@@ -1,3 +1,3 @@
 #!/bin/sh
 
-configctl -dq wireguard configure $1
+configctl -dq amneziawg configure $1

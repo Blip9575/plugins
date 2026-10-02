@@ -26,7 +26,7 @@
  * POSSIBILITY OF SUCH DAMAGE.
  */
 
-namespace OPNsense\Wireguard;
+namespace OPNsense\AmneziaWG;
 
 class DiagnosticsController extends \OPNsense\Base\IndexController
 {
@@ -39,6 +39,6 @@ class DiagnosticsController extends \OPNsense\Base\IndexController
 
     public function indexAction()
     {
-        $this->view->pick('OPNsense/Wireguard/diagnostics');
+        $this->view->pick('OPNsense/AmneziaWG/diagnostics');
     }
 }

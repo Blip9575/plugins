@@ -25,7 +25,7 @@
  *    POSSIBILITY OF SUCH DAMAGE.
  */
 
-export default class Wireguard extends BaseTableWidget {
+export default class AmneziaWG extends BaseTableWidget {
     constructor() {
         super();
     }
@@ -39,29 +39,29 @@ export default class Wireguard extends BaseTableWidget {
 
     getMarkup() {
         let $container = $('<div></div>');
-        let $wgTunnelTable = this.createTable('wgTunnelTable', {
+        let $awgTunnelTable = this.createTable('awgTunnelTable', {
             headerPosition: 'left'
         });
 
-        $container.append($wgTunnelTable);
+        $container.append($awgTunnelTable);
         return $container;
     }
 
     async onWidgetTick() {
-        const wg = await this.ajaxCall('/api/wireguard/general/get');
+        const wg = await this.ajaxCall('/api/amneziawg/general/get');
         if (!wg.general || !wg.general.enabled) {
             this.displayError(this.translations.unconfigured);
             return;
         }
 
-        const response = await this.ajaxCall('/api/wireguard/service/show');
+        const response = await this.ajaxCall('/api/amneziawg/service/show');
 
         if (!response || !response.rows || response.rows.length === 0) {
             this.displayError(this.translations.notunnels);
             return;
         }
 
-        if (!this.dataChanged('wg-tunnels', response.rows)) {
+        if (!this.dataChanged('awg-tunnels', response.rows)) {
             return; // No changes detected, do not update the UI
         }
 
@@ -69,13 +69,13 @@ export default class Wireguard extends BaseTableWidget {
     }
 
     displayError(message) {
-        $('#wgTunnelTable').empty().append(
-            $('<div class="error-message"></div>').append($('<a href="/ui/wireguard/general"></a>').text(message))
+        $('#awgTunnelTable').empty().append(
+            $('<div class="error-message"></div>').append($('<a href="/ui/amneziawg/general"></a>').text(message))
         );
     }
 
     processTunnels(newTunnels) {
-        $('.wireguard-interface').tooltip('hide');
+        $('.amneziawg-interface').tooltip('hide');
 
         let tunnels = newTunnels
             .filter(row => row.type == 'peer')
@@ -134,18 +134,18 @@ export default class Wireguard extends BaseTableWidget {
                 </span>
             </div>`;
 
-        super.updateTable('wgTunnelTable', [[summaryRow, '']], 'wg-summary');
+        super.updateTable('awgTunnelTable', [[summaryRow, '']], 'awg-summary');
 
         // Generate HTML for each tunnel
         tunnels.forEach(tunnel => {
             let header = `
                 <div style="display: flex; justify-content: space-between; align-items: center;">
                     <div style="display: flex; align-items: center;">
-                        <i class="fa ${tunnel.statusIcon} wireguard-interface" style="cursor: pointer;"
+                        <i class="fa ${tunnel.statusIcon} amneziawg-interface" style="cursor: pointer;"
                             data-toggle="tooltip" title="${tunnel.statusTooltip}">
                         </i>
                         &nbsp;
-                        <a href="/ui/wireguard/general#peers&search=${encodeURIComponent(tunnel.name)}" target="_blank" rel="noopener noreferrer">
+                        <a href="/ui/amneziawg/general#peers&search=${encodeURIComponent(tunnel.name)}" target="_blank" rel="noopener noreferrer">
                             ${tunnel.if} | ${tunnel.name}
                         </a>
                     </div>
@@ -170,10 +170,10 @@ export default class Wireguard extends BaseTableWidget {
                 </div>`;
 
             // Update the HTML table with the sorted rows
-            super.updateTable('wgTunnelTable', [[header, row]], tunnel.uniqueId);
+            super.updateTable('awgTunnelTable', [[header, row]], tunnel.uniqueId);
         });
 
         // Activate tooltips for new dynamic elements
-        $('.wireguard-interface').tooltip({container: 'body'});
+        $('.amneziawg-interface').tooltip({container: 'body'});
     }
 }

@@ -27,20 +27,20 @@
 
 <script>
     $( document ).ready(function() {
-        const data_get_map = {'frm_general_settings':"/api/wireguard/general/get"};
+        const data_get_map = {'frm_general_settings':"/api/amneziawg/general/get"};
         let configbuilder_reference = null;
         mapDataToFormUI(data_get_map).done(function(data){
             formatTokenizersUI();
             $('.selectpicker').selectpicker('refresh');
         });
 
-        const grid_peers = $("#{{formGridWireguardClient['table_id']}}").UIBootgrid({
-            search: '/api/wireguard/client/search_client',
-            get: '/api/wireguard/client/get_client/',
-            set: '/api/wireguard/client/set_client/',
-            add: '/api/wireguard/client/add_client/',
-            del: '/api/wireguard/client/del_client/',
-            toggle: '/api/wireguard/client/toggle_client/',
+        const grid_peers = $("#{{formGridAmneziaWGClient['table_id']}}").UIBootgrid({
+            search: '/api/amneziawg/client/search_client',
+            get: '/api/amneziawg/client/get_client/',
+            set: '/api/amneziawg/client/set_client/',
+            add: '/api/amneziawg/client/add_client/',
+            del: '/api/amneziawg/client/del_client/',
+            toggle: '/api/amneziawg/client/toggle_client/',
             options: {
                 initialSearchPhrase: getUrlHash('search'),
                 requestHandler: function(request){
@@ -66,7 +66,7 @@
         grid_peers.on("loaded.rs.jquery.bootgrid", function (e){
             // reload servers before grid load
             if ($("#server_filter > option").length == 0) {
-                ajaxGet('/api/wireguard/client/list_servers', {}, function(data, status){
+                ajaxGet('/api/amneziawg/client/list_servers', {}, function(data, status){
                     if (data.rows !== undefined) {
                         for (let i=0; i < data.rows.length ; ++i) {
                             let row = data.rows[i];
@@ -78,19 +78,19 @@
             }
         });
 
-        $("#{{formGridWireguardServer['table_id']}}").UIBootgrid({
-            search: '/api/wireguard/server/search_server',
-            get: '/api/wireguard/server/get_server/',
-            set: '/api/wireguard/server/set_server/',
-            add: '/api/wireguard/server/add_server/',
-            del: '/api/wireguard/server/del_server/',
-            toggle: '/api/wireguard/server/toggle_server/'
+        $("#{{formGridAmneziaWGServer['table_id']}}").UIBootgrid({
+            search: '/api/amneziawg/server/search_server',
+            get: '/api/amneziawg/server/get_server/',
+            set: '/api/amneziawg/server/set_server/',
+            add: '/api/amneziawg/server/add_server/',
+            del: '/api/amneziawg/server/del_server/',
+            toggle: '/api/amneziawg/server/toggle_server/'
         });
 
         $("#reconfigureAct").SimpleActionButton({
             onPreAction: function() {
                 const dfObj = new $.Deferred();
-                saveFormToEndpoint("/api/wireguard/general/set", 'frm_general_settings', function(){
+                saveFormToEndpoint("/api/amneziawg/general/set", 'frm_general_settings', function(){
                     dfObj.resolve();
                 });
                 return dfObj;
@@ -102,7 +102,7 @@
          */
         $("#control_label_server\\.pubkey").append($("#keygen_div").detach().show());
         $("#keygen").click(function(){
-            ajaxGet("/api/wireguard/server/key_pair", {}, function(data, status){
+            ajaxGet("/api/amneziawg/server/key_pair", {}, function(data, status){
                 if (data.status && data.status === 'ok') {
                     $("#server\\.pubkey").val(data.pubkey);
                     $("#server\\.privkey").val(data.privkey);
@@ -111,7 +111,7 @@
         })
         $("#control_label_client\\.psk").append($("#pskgen_div").detach().show());
         $("#pskgen").click(function(){
-            ajaxGet("/api/wireguard/client/psk", {}, function(data, status){
+            ajaxGet("/api/amneziawg/client/psk", {}, function(data, status){
                 if (data.status && data.status === 'ok') {
                     $("#client\\.psk").val(data.psk);
                 }
@@ -121,9 +121,9 @@
         /**
          * Quick instance filter on top
          */
-        $("#filter_container").detach().insertAfter('#{{formGridWireguardClient["table_id"]}}-header .search');
+        $("#filter_container").detach().insertAfter('#{{formGridAmneziaWGClient["table_id"]}}-header .search');
         $("#server_filter").change(function(){
-            $('#{{formGridWireguardClient['table_id']}}').bootgrid('reload');
+            $('#{{formGridAmneziaWGClient['table_id']}}').bootgrid('reload');
         });
 
         /**
@@ -162,7 +162,7 @@
          */
         function configbuilder_load_server(server_id, callback, update_address = true)
         {
-            ajaxGet('/api/wireguard/client/get_server_info/' + server_id, {}, function(data, status) {
+            ajaxGet('/api/amneziawg/client/get_server_info/' + server_id, {}, function(data, status) {
                 if (data.status === 'ok') {
                     let endpoint = $("#configbuilder\\.endpoint");
                     let peer_dns = $("#configbuilder\\.peer_dns");
@@ -250,7 +250,7 @@
          */
         $("#control_label_configbuilder\\.psk").append($("#pskgen_cb_div").detach().show());
         $("#pskgen_cb").click(function(){
-            ajaxGet("/api/wireguard/client/psk", {}, function(data, status){
+            ajaxGet("/api/amneziawg/client/psk", {}, function(data, status){
                 if (data.status && data.status === 'ok') {
                     $("#configbuilder\\.psk").val(data.psk).change();
                 }
@@ -293,7 +293,7 @@
                     endpoint: endpoint.val()
                 }
             };
-            ajaxCall('/api/wireguard/client/add_client_builder', peer, function(data, status) {
+            ajaxCall('/api/amneziawg/client/add_client_builder', peer, function(data, status) {
                 if (data.validations) {
                     if (data.validations['configbuilder.tunneladdress']) {
                         /*
@@ -318,7 +318,7 @@
                                 'allowed_ips': allowed_ips.val()
                             }
                         };
-                        ajaxCall('/api/wireguard/server/set_server/' + instance_id, param, function(data, status){
+                        ajaxCall('/api/amneziawg/server/set_server/' + instance_id, param, function(data, status){
                             configbuilder_new();
                         });
                     } else {
@@ -335,12 +335,12 @@
             configbuilder_reference = null;
             configbuilder_set_reference_mode(false);
 
-            mapDataToFormUI({'frm_config_builder':"/api/wireguard/client/get_client_builder"}).done(function(data){
+            mapDataToFormUI({'frm_config_builder':"/api/amneziawg/client/get_client_builder"}).done(function(data){
                 formatTokenizersUI();
                 $('.selectpicker').selectpicker('refresh');
                 // Private key storage is intentionally opt-in to preserve existing behavior.
                 $("#configbuilder\\.store_privkey").prop("checked", false);
-                ajaxGet("/api/wireguard/server/key_pair", {}, function(data, status){
+                ajaxGet("/api/amneziawg/server/key_pair", {}, function(data, status){
                     if (data.status && data.status === 'ok') {
                         $("#configbuilder\\.pubkey").val(data.pubkey);
                         $("#configbuilder\\.privkey").val(data.privkey).change();
@@ -382,7 +382,7 @@
             } else {
                 configbuilder_reference = null;
                 $apply_container.show();
-                $('#{{formGridWireguardClient['table_id']}}').bootgrid('reload');
+                $('#{{formGridAmneziaWGClient['table_id']}}').bootgrid('reload');
                 $('#frm_general_settings').parent().show();
             }
         });
@@ -421,7 +421,7 @@
                 </select>
             </div>
         </div>
-        {{ partial('layout_partials/base_bootgrid_table', formGridWireguardClient + {'command_width':'120'}) }}
+        {{ partial('layout_partials/base_bootgrid_table', formGridAmneziaWGClient + {'command_width':'120'}) }}
     </div>
     <div id="instances" class="tab-pane fade in active">
         <span id="keygen_div" style="display:none" class="pull-right">
@@ -429,7 +429,7 @@
               <i class="fa fa-fw fa-gear"></i>
             </button>
         </span>
-        {{ partial('layout_partials/base_bootgrid_table', formGridWireguardServer)}}
+        {{ partial('layout_partials/base_bootgrid_table', formGridAmneziaWGServer)}}
     </div>
     <div id="configbuilder" class="tab-pane fade in">
         <span id="pskgen_cb_div" style="display:none" class="pull-right">
@@ -443,6 +443,6 @@
 <div class="tab-content content-box tab-content __mt">
     {{ partial("layout_partials/base_form",['fields':generalForm,'id':'frm_general_settings'])}}
 </div>
-{{ partial('layout_partials/base_apply_button', {'data_endpoint': '/api/wireguard/service/reconfigure'}) }}
-{{ partial("layout_partials/base_dialog",['fields':formDialogEditWireguardClient,'id':formGridWireguardClient['edit_dialog_id'],'label':lang._('Edit peer')])}}
-{{ partial("layout_partials/base_dialog",['fields':formDialogEditWireguardServer,'id':formGridWireguardServer['edit_dialog_id'],'label':lang._('Edit instance')])}}
+{{ partial('layout_partials/base_apply_button', {'data_endpoint': '/api/amneziawg/service/reconfigure'}) }}
+{{ partial("layout_partials/base_dialog",['fields':formDialogEditAmneziaWGClient,'id':formGridAmneziaWGClient['edit_dialog_id'],'label':lang._('Edit peer')])}}
+{{ partial("layout_partials/base_dialog",['fields':formDialogEditAmneziaWGServer,'id':formGridAmneziaWGServer['edit_dialog_id'],'label':lang._('Edit instance')])}}

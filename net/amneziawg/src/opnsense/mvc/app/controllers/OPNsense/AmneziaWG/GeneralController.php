@@ -26,7 +26,7 @@
  * POSSIBILITY OF SUCH DAMAGE.
  */
 
-namespace OPNsense\Wireguard;
+namespace OPNsense\AmneziaWG;
 
 class GeneralController extends \OPNsense\Base\IndexController
 {
@@ -43,13 +43,13 @@ class GeneralController extends \OPNsense\Base\IndexController
     {
         $this->view->generalForm = $this->getForm("general");
 
-        $this->view->formDialogEditWireguardClient = $this->getForm("dialogEditWireguardClient");
-        $this->view->formGridWireguardClient = $this->getFormGrid("dialogEditWireguardClient");
+        $this->view->formDialogEditAmneziaWGClient = $this->getForm("dialogEditAmneziaWGClient");
+        $this->view->formGridAmneziaWGClient = $this->getFormGrid("dialogEditAmneziaWGClient");
 
-        $this->view->formDialogEditWireguardServer = $this->getForm("dialogEditWireguardServer");
-        $this->view->formGridWireguardServer = $this->getFormGrid("dialogEditWireguardServer");
+        $this->view->formDialogEditAmneziaWGServer = $this->getForm("dialogEditAmneziaWGServer");
+        $this->view->formGridAmneziaWGServer = $this->getFormGrid("dialogEditAmneziaWGServer");
 
         $this->view->formDialogConfigBuilder = $this->getForm("dialogConfigBuilder");
-        $this->view->pick('OPNsense/Wireguard/general');
+        $this->view->pick('OPNsense/AmneziaWG/general');
     }
 }

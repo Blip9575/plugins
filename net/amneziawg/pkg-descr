@@ -1,0 +1,17 @@
+AmneziaWG is a WireGuard-compatible VPN protocol that adds traffic
+obfuscation (junk packets, padding, custom message headers and
+signature packets) to resist detection by Deep Packet Inspection.
+With all obfuscation settings left empty it interoperates with
+standard WireGuard peers.
+
+This plugin is a port of the OPNsense core WireGuard implementation
+(opnsense/core fa31068e35f1) using the amnezia-kmod kernel module.
+
+https://docs.amnezia.org/documentation/amnezia-wg/
+
+Plugin Changelog
+================
+
+1.0
+
+* initial release

@@ -34,7 +34,7 @@ import subprocess
 
 
 
-sp = subprocess.run(['/usr/bin/wg', 'show', 'all', 'latest-handshakes'], capture_output=True, text=True)
+sp = subprocess.run(['/usr/local/bin/awg', 'show', 'all', 'latest-handshakes'], capture_output=True, text=True)
 ts_now = time.time()
 handshakes = {}
 for line in sp.stdout.split('\n'):
@@ -42,7 +42,7 @@ for line in sp.stdout.split('\n'):
     if len(parts) == 3 and parts[2].isdigit():
         handshakes["%s-%s" % (parts[0], parts[1])] = ts_now - int(parts[2])
 
-sp = subprocess.run(['/usr/bin/wg', 'show', 'all', 'allowed-ips'], capture_output=True, text=True)
+sp = subprocess.run(['/usr/local/bin/awg', 'show', 'all', 'allowed-ips'], capture_output=True, text=True)
 allowed_ips = {}
 for line in sp.stdout.split('\n'):
     parts = line.split()
@@ -50,7 +50,7 @@ for line in sp.stdout.split('\n'):
         allowed_ips["%s-%s" % (parts[0], parts[1])] = ','.join(parts[2:])
 
 
-for filename in glob.glob('/usr/local/etc/wireguard/*.conf'):
+for filename in glob.glob('/usr/local/etc/amneziawg/*.conf'):
     this_peer = {}
     ifname = os.path.basename(filename).split('.')[0]
     with open(filename, 'r') as fhandle:
@@ -70,7 +70,7 @@ for filename in glob.glob('/usr/local/etc/wireguard/*.conf'):
                     # skip if there has been a handshake recently
                     subprocess.run(
                         [
-                            '/usr/bin/wg',
+                            '/usr/local/bin/awg',
                             'set',
                             ifname,
                             'peer',
@@ -84,7 +84,7 @@ for filename in glob.glob('/usr/local/etc/wireguard/*.conf'):
                 if allowed_ips.get(peer_key, '(none)') == '(none)':
                     subprocess.run(
                         [
-                            '/usr/bin/wg',
+                            '/usr/local/bin/awg',
                             'set',
                             ifname,
                             'peer',

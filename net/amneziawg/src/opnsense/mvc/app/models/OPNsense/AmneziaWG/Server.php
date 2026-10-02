@@ -26,7 +26,7 @@
  * POSSIBILITY OF SUCH DAMAGE.
  */
 
-namespace OPNsense\Wireguard;
+namespace OPNsense\AmneziaWG;
 
 use OPNsense\Base\BaseModel;
 

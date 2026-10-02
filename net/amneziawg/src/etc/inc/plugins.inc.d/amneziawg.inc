@@ -27,29 +27,29 @@
  * POSSIBILITY OF SUCH DAMAGE.
  */
 
-function wireguard_enabled()
+function amneziawg_enabled()
 {
-    return (string)(new \OPNsense\Wireguard\General())->enabled == '1';
+    return (string)(new \OPNsense\AmneziaWG\General())->enabled == '1';
 }
 
-function wireguard_services()
+function amneziawg_services()
 {
     $services = [];
 
-    if (!wireguard_enabled()) {
+    if (!amneziawg_enabled()) {
         return $services;
     }
 
-    foreach ((new OPNsense\Wireguard\Server())->servers->server->iterateItems() as $key => $node) {
+    foreach ((new OPNsense\AmneziaWG\Server())->servers->server->iterateItems() as $key => $node) {
         if (!empty((string)$node->enabled)) {
             $services[] = [
-                'description' => 'WireGuard ' . htmlspecialchars($node->name),
+                'description' => 'AmneziaWG ' . htmlspecialchars($node->name),
                 'configd' => [
-                    'start' => ["wireguard start {$key}"],
-                    'restart' => ["wireguard restart {$key}"],
-                    'stop' => ["wireguard stop {$key}"],
+                    'start' => ["amneziawg start {$key}"],
+                    'restart' => ["amneziawg restart {$key}"],
+                    'stop' => ["amneziawg stop {$key}"],
                 ],
-                'name' => 'wireguard',
+                'name' => 'amneziawg',
                 'nocheck' => true,
                 'id' => $key,
             ];
@@ -59,24 +59,24 @@ function wireguard_services()
     return $services;
 }
 
-function wireguard_syslog()
+function amneziawg_syslog()
 {
     return [
-        'wireguard' => ['facility' => ['wireguard']]
+        'amneziawg' => ['facility' => ['amneziawg']]
     ];
 }
 
-function wireguard_interfaces()
+function amneziawg_interfaces()
 {
     $interfaces = [];
 
-    if (!wireguard_enabled()) {
+    if (!amneziawg_enabled()) {
         return $interfaces;
     }
 
-    $interfaces['wireguard'] = [
-        'descr' => gettext('WireGuard (Group)'),
-        'if' => 'wireguard',
+    $interfaces['amneziawg'] = [
+        'descr' => gettext('AmneziaWG (Group)'),
+        'if' => 'amneziawg',
         'virtual' => true,
         'enable' => true,
         'type' => 'group',
@@ -86,43 +86,43 @@ function wireguard_interfaces()
     return $interfaces;
 }
 
-function wireguard_xmlrpc_sync()
+function amneziawg_xmlrpc_sync()
 {
     $result = [];
 
-    $result['id'] = 'wireguard';
-    $result['section'] = 'OPNsense.wireguard';
-    $result['description'] = gettext('WireGuard');
-    $result['services'] = ['wireguard'];
+    $result['id'] = 'amneziawg';
+    $result['section'] = 'OPNsense.amneziawg';
+    $result['description'] = gettext('AmneziaWG');
+    $result['services'] = ['amneziawg'];
 
     return [$result];
 }
 
-function wireguard_devices()
+function amneziawg_devices()
 {
     $names = [];
-    foreach ((new OPNsense\Wireguard\Server())->servers->server->iterateItems() as $key => $node) {
+    foreach ((new OPNsense\AmneziaWG\Server())->servers->server->iterateItems() as $key => $node) {
         if (!empty((string)$node->enabled)) {
             $names[(string)$node->interface] = [
-                'descr' => sprintf('%s (WireGuard - %s)', (string)$node->interface, (string)$node->name),
+                'descr' => sprintf('%s (AmneziaWG - %s)', (string)$node->interface, (string)$node->name),
                 'ifdescr' => (string)$node->name,
                 'name' => (string)$node->interface
             ];
         }
     }
     return [[
-        'function' => 'wireguard_prepare', /* XXX only (empty) device creation */
+        'function' => 'amneziawg_prepare', /* XXX only (empty) device creation */
         'configurable' => false,
-        'pattern' => '^wg',
-        'type' => 'wireguard',
+        'pattern' => '^awg',
+        'type' => 'amneziawg',
         'volatile' => true,
         'names' => $names,
     ]];
 }
 
-function wireguard_prepare($device)
+function amneziawg_prepare($device)
 {
-    foreach ((new OPNsense\Wireguard\Server())->servers->server->iterateItems() as $node) {
+    foreach ((new OPNsense\AmneziaWG\Server())->servers->server->iterateItems() as $node) {
         if ($device != (string)$node->interface) {
             continue;
         }
@@ -131,8 +131,8 @@ function wireguard_prepare($device)
         @unlink((string)$node->statFilename);
 
         if (!does_interface_exist($device)) {
-            mwexecf('/sbin/ifconfig wg create name %s', $device);
-            mwexecf('/sbin/ifconfig %s group wireguard', $device);
+            mwexecf('/sbin/ifconfig amn create name %s', $device);
+            mwexecf('/sbin/ifconfig %s group amneziawg', $device);
         }
 
         return $device;
@@ -141,35 +141,35 @@ function wireguard_prepare($device)
     return null;
 }
 
-function wireguard_configure()
+function amneziawg_configure()
 {
     return [
-        'newwanip' => ['wireguard_sync'],
-        'vpn' => ['wireguard_configure_do'],
+        'newwanip' => ['amneziawg_sync'],
+        'vpn' => ['amneziawg_configure_do'],
     ];
 }
 
-function wireguard_configure_do($verbose = false)
+function amneziawg_configure_do($verbose = false)
 {
-    if (!wireguard_enabled()) {
+    if (!amneziawg_enabled()) {
         return;
     }
 
-    service_log('Configuring WireGuard VPN...', $verbose);
+    service_log('Configuring AmneziaWG VPN...', $verbose);
 
-    configd_run('wireguard configure');
+    configd_run('amneziawg configure');
 
     service_log("done.\n", $verbose);
 }
 
-function wireguard_sync($verbose = false)
+function amneziawg_sync($verbose = false)
 {
-    if (!wireguard_enabled()) {
+    if (!amneziawg_enabled()) {
         return;
     }
 
     $instances = [];
-    foreach ((new OPNsense\Wireguard\Server())->servers->server->iterateItems() as $node) {
+    foreach ((new OPNsense\AmneziaWG\Server())->servers->server->iterateItems() as $node) {
         if (!empty((string)$node->enabled)) {
             $instances[(string)$node->interface] = (string)$node->cnfFilename;
         }
@@ -179,10 +179,10 @@ function wireguard_sync($verbose = false)
         return;
     }
 
-    service_log('Synchronizing WireGuard VPN...', $verbose);
+    service_log('Synchronizing AmneziaWG VPN...', $verbose);
 
     foreach ($instances as $device => $config) {
-        mwexecf('/usr/bin/wg syncconf %s %s', [$device, $config]);
+        mwexecf('/usr/local/bin/awg syncconf %s %s', [$device, $config]);
     }
 
     service_log("done.\n", $verbose);

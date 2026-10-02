@@ -30,10 +30,10 @@ import ujson
 
 
 def keypair():
-    sp = subprocess.run(['/usr/bin/wg', 'genkey'], capture_output=True, text=True)
+    sp = subprocess.run(['/usr/local/bin/awg', 'genkey'], capture_output=True, text=True)
     if sp.returncode == 0:
         privkey = sp.stdout.strip()
-        sp = subprocess.run(['/usr/bin/wg', 'pubkey'], input=privkey, capture_output=True, text=True)
+        sp = subprocess.run(['/usr/local/bin/awg', 'pubkey'], input=privkey, capture_output=True, text=True)
         if sp.returncode == 0:
             return {'privkey': privkey, 'pubkey': sp.stdout.strip()}
     return None

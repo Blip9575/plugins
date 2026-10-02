@@ -65,12 +65,12 @@ function get_vhid_status()
 function wg_start($server, $fhandle, $ifcfgflag = 'up', $reload = false)
 {
     if (!does_interface_exist($server->interface)) {
-        mwexecf('/sbin/ifconfig wg create name %s', [$server->interface]);
-        mwexecf('/sbin/ifconfig %s group wireguard', [$server->interface]);
+        mwexecf('/sbin/ifconfig amn create name %s', [$server->interface]);
+        mwexecf('/sbin/ifconfig %s group amneziawg', [$server->interface]);
         $reload = true;
     }
 
-    mwexecf('/usr/bin/wg syncconf %s %s', [$server->interface, $server->cnfFilename]);
+    mwexecf('/usr/local/bin/awg syncconf %s %s', [$server->interface, $server->cnfFilename]);
 
     foreach ($server->tunneladdress->getValues() as $alias) {
         $proto = strpos($alias, ':') === false ? "inet" : "inet6";
@@ -103,7 +103,7 @@ function wg_start($server, $fhandle, $ifcfgflag = 'up', $reload = false)
             $routes_to_skip[$ipproto][] = $alias;
         }
 
-        foreach ((new OPNsense\Wireguard\Client())->clients->client->iterateItems() as $key => $client) {
+        foreach ((new OPNsense\AmneziaWG\Client())->clients->client->iterateItems() as $key => $client) {
             if (empty((string)$client->enabled) || !in_array($key, $peers)) {
                 continue;
             }
@@ -146,18 +146,18 @@ function wg_start($server, $fhandle, $ifcfgflag = 'up', $reload = false)
     ftruncate($fhandle, 0);
     fwrite($fhandle, @md5_file($server->cnfFilename) . "|" . wg_reconfigure_hash($server));
 
-    syslog(LOG_NOTICE, "wireguard instance {$server->name} ({$server->interface}) started");
+    syslog(LOG_NOTICE, "amneziawg instance {$server->name} ({$server->interface}) started");
 }
 
 /**
- * stop wireguard tunnel, kill the device, the routes should drop automatically.
+ * stop amneziawg tunnel, kill the device, the routes should drop automatically.
  */
 function wg_stop($server)
 {
     if (does_interface_exist($server->interface)) {
         legacy_interface_destroy($server->interface);
     }
-    syslog(LOG_NOTICE, "wireguard instance {$server->name} ({$server->interface}) stopped");
+    syslog(LOG_NOTICE, "amneziawg instance {$server->name} ({$server->interface}) stopped");
 }
 
 
@@ -201,10 +201,10 @@ $opts = getopt('ah', [], $optind);
 $args = array_slice($argv, $optind);
 
 /* setup syslog logging */
-openlog("wireguard", LOG_ODELAY, LOG_AUTH);
+openlog("amneziawg", LOG_ODELAY, LOG_AUTH);
 
 if (isset($opts['h']) || empty($args) || !in_array($args[0], ['start', 'stop', 'restart', 'configure'])) {
-    echo "Usage: wg-service-control.php [-a] [-h] [stop|start|restart|configure] [uuid|vhid]\n\n";
+    echo "Usage: awg-service-control.php [-a] [-h] [stop|start|restart|configure] [uuid|vhid]\n\n";
     echo "\t-a all instances\n";
 } elseif (isset($opts['a']) || !empty($args[1])) {
     // either a server id (uuid) or a vhid could be offered
@@ -218,9 +218,9 @@ if (isset($opts['h']) || empty($args) || !in_array($args[0], ['start', 'stop', '
     $action = $args[0];
 
     $server_devs = [];
-    if (!(new OPNsense\Wireguard\General())->enabled->isEmpty()) {
+    if (!(new OPNsense\AmneziaWG\General())->enabled->isEmpty()) {
         $vhids = get_vhid_status();
-        foreach ((new OPNsense\Wireguard\Server())->servers->server->iterateItems() as $key => $node) {
+        foreach ((new OPNsense\AmneziaWG\Server())->servers->server->iterateItems() as $key => $node) {
             $carp_depend_on = (string)$node->carp_depend_on;
             if (empty((string)$node->enabled)) {
                 continue;
@@ -265,7 +265,7 @@ if (isset($opts['h']) || empty($args) || !in_array($args[0], ['start', 'stop', '
                             syslog(
                                 LOG_NOTICE,
                                 sprintf(
-                                    "Wireguard configure event instance %s (%s) vhid: %s carp: %s interface: %s",
+                                    "AmneziaWG configure event instance %s (%s) vhid: %s carp: %s interface: %s",
                                     $node->name,
                                     $node->interface,
                                     $vhid,
@@ -285,7 +285,7 @@ if (isset($opts['h']) || empty($args) || !in_array($args[0], ['start', 'stop', '
                                 // Fluent reloading not supported for this instance, make sure the user is informed
                                 syslog(
                                     LOG_NOTICE,
-                                    "wireguard instance {$node->name} ({$node->interface}) " .
+                                    "amneziawg instance {$node->name} ({$node->interface}) " .
                                     "can not reconfigure without stopping it first."
                                 );
 
@@ -304,7 +304,7 @@ if (isset($opts['h']) || empty($args) || !in_array($args[0], ['start', 'stop', '
                         } elseif ($ifstatus != $carp_if_flag) {
                             syslog(
                                 LOG_NOTICE,
-                                "wireguard instance {$node->name} ({$node->interface}) " .
+                                "amneziawg instance {$node->name} ({$node->interface}) " .
                                 "switching to " . strtoupper($carp_if_flag)
                             );
 
@@ -322,7 +322,7 @@ if (isset($opts['h']) || empty($args) || !in_array($args[0], ['start', 'stop', '
      * When -a is specified, cleanup up old or disabled instances (files and interfaces)
      */
     if ($server_id == null && $vhid == null) {
-        foreach (glob('/usr/local/etc/wireguard/wg*') as $filename) {
+        foreach (glob('/usr/local/etc/amneziawg/awg*') as $filename) {
             $this_dev = explode('.', basename($filename))[0];
             if (!in_array($this_dev, $server_devs)) {
                 @unlink($filename);

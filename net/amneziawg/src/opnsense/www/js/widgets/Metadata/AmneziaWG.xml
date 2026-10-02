@@ -1,0 +1,19 @@
+<metadata>
+    <AmneziaWG>
+        <filename>AmneziaWG.js</filename>
+        <link>/ui/amneziawg/general</link>
+        <endpoints>
+            <endpoint>/api/amneziawg/service/show</endpoint>
+            <endpoint>/api/amneziawg/general/get</endpoint>
+        </endpoints>
+        <translations>
+            <title>AmneziaWG</title>
+            <unconfigured>AmneziaWG is currently disabled. Click to configure AmneziaWG.</unconfigured>
+            <notunnels>No tunnels connected</notunnels>
+            <online>Online</online>
+            <offline>Offline</offline>
+            <stale>Stale</stale>
+            <notavailable>N/A</notavailable>
+        </translations>
+    </AmneziaWG>
+</metadata>

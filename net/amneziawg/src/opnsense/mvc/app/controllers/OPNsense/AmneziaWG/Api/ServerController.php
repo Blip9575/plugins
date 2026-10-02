@@ -27,7 +27,7 @@
  * POSSIBILITY OF SUCH DAMAGE.
  */
 
-namespace OPNsense\Wireguard\Api;
+namespace OPNsense\AmneziaWG\Api;
 
 use OPNsense\Base\ApiMutableModelControllerBase;
 use OPNsense\Core\Backend;
@@ -35,11 +35,11 @@ use OPNsense\Core\Backend;
 class ServerController extends ApiMutableModelControllerBase
 {
     protected static $internalModelName = 'server';
-    protected static $internalModelClass = '\OPNsense\Wireguard\Server';
+    protected static $internalModelClass = '\OPNsense\AmneziaWG\Server';
 
     public function keyPairAction()
     {
-        return json_decode((new Backend())->configdRun('wireguard gen_keypair'), true);
+        return json_decode((new Backend())->configdRun('amneziawg gen_keypair'), true);
     }
 
     public function searchServerAction()

@@ -35,7 +35,7 @@ for line in subprocess.run(['/sbin/ifconfig'], capture_output=True, text=True).s
         ifname = line.split(':')[0]
         interfaces[ifname] = 'up' if 'UP' in line.split('<')[1].split('>')[0].split(',') else 'down'
 
-sp = subprocess.run(['/usr/bin/wg', 'show', 'all', 'dump'], capture_output=True, text=True)
+sp = subprocess.run(['/usr/local/bin/awg', 'show', 'all', 'dump'], capture_output=True, text=True)
 result = {'records': []}
 if sp.returncode == 0:
     for line in sp.stdout.split("\n"):

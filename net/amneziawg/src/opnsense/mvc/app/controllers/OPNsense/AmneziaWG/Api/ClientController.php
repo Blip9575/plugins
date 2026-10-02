@@ -27,22 +27,22 @@
  * POSSIBILITY OF SUCH DAMAGE.
  */
 
-namespace OPNsense\Wireguard\Api;
+namespace OPNsense\AmneziaWG\Api;
 
 use OPNsense\Base\ApiMutableModelControllerBase;
 use OPNsense\Core\Config;
-use OPNsense\Wireguard\Server;
+use OPNsense\AmneziaWG\Server;
 use OPNsense\Core\Backend;
 use OPNsense\Firewall\Util;
 
 class ClientController extends ApiMutableModelControllerBase
 {
     protected static $internalModelName = 'client';
-    protected static $internalModelClass = '\OPNsense\Wireguard\Client';
+    protected static $internalModelClass = '\OPNsense\AmneziaWG\Client';
 
     public function pskAction()
     {
-        return ['psk' => trim((new Backend())->configdRun('wireguard gen_psk')), 'status' => 'ok' ];
+        return ['psk' => trim((new Backend())->configdRun('amneziawg gen_psk')), 'status' => 'ok' ];
     }
 
     public function listServersAction()

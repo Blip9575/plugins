@@ -1,6 +1,6 @@
 <model>
-    <mount>//OPNsense/wireguard/client</mount>
-    <description>WireGuard peer configuration</description>
+    <mount>//OPNsense/amneziawg/client</mount>
+    <description>AmneziaWG peer configuration</description>
     <version>1.0.0</version>
     <items>
         <clients>
@@ -59,7 +59,7 @@
                 <servers type="ModelRelationField" volatile="true">
                     <Model>
                         <template>
-                            <source>OPNsense.Wireguard.Server</source>
+                            <source>OPNsense.AmneziaWG.Server</source>
                             <items>servers.server</items>
                             <display>name</display>
                         </template>

@@ -21,7 +21,7 @@
         <id>configbuilder.pubkey</id>
         <label>Public key</label>
         <type>text</type>
-        <help>Public key of this peer. You can generate the key using the private key piped to "wg pubkey".</help>
+        <help>Public key of this peer. You can generate the key using the private key piped to "awg pubkey".</help>
     </field>
     <field>
         <id>configbuilder.store_privkey</id>

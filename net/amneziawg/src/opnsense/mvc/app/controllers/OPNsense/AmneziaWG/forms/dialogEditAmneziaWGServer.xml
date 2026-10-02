@@ -24,7 +24,7 @@
         <id>server.instance</id>
         <label>Instance</label>
         <type>info</type>
-        <help>This is the instance number to give the WireGuard device a unique name (wgX).</help>
+        <help>This is the instance number to give the AmneziaWG device a unique name (wgX).</help>
         <grid_view>
             <column-id>interface</column-id>
         </grid_view>

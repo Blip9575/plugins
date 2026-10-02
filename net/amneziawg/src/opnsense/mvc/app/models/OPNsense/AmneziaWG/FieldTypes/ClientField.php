@@ -26,10 +26,10 @@
  * POSSIBILITY OF SUCH DAMAGE.
  */
 
-namespace OPNsense\Wireguard\FieldTypes;
+namespace OPNsense\AmneziaWG\FieldTypes;
 
 use OPNsense\Base\FieldTypes\ArrayField;
-use OPNsense\Wireguard\Server;
+use OPNsense\AmneziaWG\Server;
 
 class ClientField extends ArrayField
 {

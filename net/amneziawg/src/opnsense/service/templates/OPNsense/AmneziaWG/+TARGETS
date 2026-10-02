@@ -1,1 +1,1 @@
-wireguard-server.conf:/usr/local/etc/wireguard/wg[OPNsense.wireguard.server.servers.server.%.instance].conf
+amneziawg-server.conf:/usr/local/etc/amneziawg/awg[OPNsense.amneziawg.server.servers.server.%.instance].conf

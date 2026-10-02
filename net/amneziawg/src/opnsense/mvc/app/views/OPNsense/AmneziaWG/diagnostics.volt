@@ -28,7 +28,7 @@
        $( document ).ready(function() {
 
             $("#grid-sessions").UIBootgrid({
-                search:'/api/wireguard/service/show',
+                search:'/api/amneziawg/service/show',
                 options:{
                     multiSelect: false,
                     rowSelect: false,
