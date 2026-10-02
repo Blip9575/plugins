@@ -293,14 +293,12 @@
     <field>
         <type>header</type>
         <label>AmneziaWG 3.x</label>
-        <advanced>true</advanced>
         <collapse>true</collapse>
     </field>
     <field>
         <id>server.headerprotectionkey</id>
         <label>Header protection key</label>
         <type>text</type>
-        <advanced>true</advanced>
         <help>32 byte base64 key that encrypts packet headers. Must match on both ends. Requires S1-S4 of at least 12. Requires amnezia-kmod and amnezia-tools 3.x, older versions reject this key and the instance will not start.</help>
         <grid_view>
             <visible>false</visible>
@@ -310,7 +308,6 @@
         <id>server.contentpaddingaddition</id>
         <label>Content padding addition</label>
         <type>text</type>
-        <advanced>true</advanced>
         <help>Random number of bytes added to transport packets, as a number or range a-b, up to 65535. Requires amnezia-kmod and amnezia-tools 3.x, older versions reject this key and the instance will not start.</help>
         <grid_view>
             <visible>false</visible>
@@ -320,7 +317,6 @@
         <id>server.rekeyaftertime</id>
         <label>Rekey after time</label>
         <type>text</type>
-        <advanced>true</advanced>
         <help>Interval before a new handshake is started. Number or range a-b, up to 65535. Requires amnezia-kmod and amnezia-tools 3.x, older versions reject this key and the instance will not start.</help>
         <grid_view>
             <visible>false</visible>
@@ -330,7 +326,6 @@
         <id>server.rekeytimeout</id>
         <label>Rekey timeout</label>
         <type>text</type>
-        <advanced>true</advanced>
         <help>Handshake timeout. Number or range a-b, up to 65535. Requires amnezia-kmod and amnezia-tools 3.x, older versions reject this key and the instance will not start.</help>
         <grid_view>
             <visible>false</visible>
@@ -340,7 +335,6 @@
         <id>server.rejectaftertime</id>
         <label>Reject after time</label>
         <type>text</type>
-        <advanced>true</advanced>
         <help>Interval after which the connection initiates a new handshake. Number or range a-b, up to 65535. Requires amnezia-kmod and amnezia-tools 3.x, older versions reject this key and the instance will not start.</help>
         <grid_view>
             <visible>false</visible>
@@ -350,7 +344,6 @@
         <id>server.keepalivetimeout</id>
         <label>Keepalive timeout</label>
         <type>text</type>
-        <advanced>true</advanced>
         <help>Interval before a keepalive is sent. Number or range a-b, up to 65535. Requires amnezia-kmod and amnezia-tools 3.x, older versions reject this key and the instance will not start.</help>
         <grid_view>
             <visible>false</visible>
@@ -360,7 +353,6 @@
         <id>server.maxhandshakeattempts</id>
         <label>Max handshake attempts</label>
         <type>text</type>
-        <advanced>true</advanced>
         <help>Maximum number of handshake retries. Number or range a-b, up to 65535. Requires amnezia-kmod and amnezia-tools 3.x, older versions reject this key and the instance will not start.</help>
         <grid_view>
             <visible>false</visible>
@@ -370,7 +362,6 @@
         <id>server.randomtrailers</id>
         <label>Random trailers</label>
         <type>checkbox</type>
-        <advanced>true</advanced>
         <help>Adds random trailers to packets so handshake packets no longer have a fixed length. Must be the same on both ends, the handshake fails otherwise. The Amnezia documentation recommends the same values for S1-S4 when this is enabled. Requires AmneziaWG 3.1 (amnezia-kmod and amnezia-tools 3.x), older versions reject this key and the instance will not start.</help>
         <grid_view>
             <visible>false</visible>
@@ -382,7 +373,6 @@
         <id>server.disablecookies</id>
         <label>Disable cookies</label>
         <type>checkbox</type>
-        <advanced>true</advanced>
         <help>Disables sending handshake cookie reply messages. Requires AmneziaWG 3.1 (amnezia-kmod and amnezia-tools 3.x), older versions reject this key and the instance will not start.</help>
         <grid_view>
             <visible>false</visible>
