@@ -144,7 +144,10 @@ function wg_start($server, $fhandle, $ifcfgflag = 'up', $reload = false)
     // flush checksum to ease change detection
     fseek($fhandle, 0);
     ftruncate($fhandle, 0);
-    fwrite($fhandle, @md5_file($server->cnfFilename) . "|" . wg_reconfigure_hash($server));
+    fwrite(
+        $fhandle,
+        @md5_file($server->cnfFilename) . "|" . wg_reconfigure_hash($server) . "|" . awg_set_keys($server)
+    );
 
     syslog(LOG_NOTICE, "amneziawg instance {$server->name} ({$server->interface}) started");
 }
@@ -160,6 +163,30 @@ function wg_stop($server)
     syslog(LOG_NOTICE, "amneziawg instance {$server->name} ({$server->interface}) stopped");
 }
 
+
+/**
+ * List the obfuscation options which are set for this instance. awg syncconf only applies keys that are present,
+ * a key which was removed from the configuration keeps its old value in the kernel until the interface is recreated.
+ */
+function awg_set_keys($server)
+{
+    $keys = [];
+    foreach (
+        ['jc', 'jmin', 'jmax', 's1', 's2', 's3', 's4', 'h1', 'h2', 'h3', 'h4', 'i1', 'i2', 'i3', 'i4', 'i5',
+         'headerprotectionkey', 'contentpaddingaddition', 'rekeyaftertime', 'rekeytimeout', 'rejectaftertime',
+         'keepalivetimeout', 'maxhandshakeattempts'] as $key
+    ) {
+        if ((string)$server->$key !== '') {
+            $keys[] = $key;
+        }
+    }
+    foreach (['randomtrailers', 'disablecookies'] as $key) {
+        if ((string)$server->$key === '1') {
+            $keys[] = $key;
+        }
+    }
+    return implode(',', $keys);
+}
 
 /**
  * Calculate a hash which determines if we are able to reconfigure without a restart of the tunnel.
@@ -199,7 +226,8 @@ function get_stat_hash($fhandle)
     $parts = explode('|', $payload);
     return [
         'file' => $parts[0] ?? '',
-        'interface' => $parts[1] ?? ''
+        'interface' => $parts[1] ?? '',
+        'keys' => $parts[2] ?? null
     ];
 }
 
@@ -286,8 +314,20 @@ if (isset($opts['h']) || empty($args) || !in_array($args[0], ['start', 'stop', '
                             empty($ifdetails[(string)$node->interface])
                         ) {
                             $reload = false;
+                            $prev_keys = get_stat_hash($statHandle)['keys'];
 
-                            if (get_stat_hash($statHandle)['interface'] != wg_reconfigure_hash($node)) {
+                            if (
+                                !empty($ifdetails[(string)$node->interface]) && $prev_keys !== null &&
+                                !empty(array_diff(explode(',', $prev_keys), explode(',', awg_set_keys($node))))
+                            ) {
+                                // syncconf keeps obfuscation keys which were removed, only a new interface starts clean
+                                syslog(
+                                    LOG_NOTICE,
+                                    "amneziawg instance {$node->name} ({$node->interface}) " .
+                                    "had obfuscation options removed, recreating the interface."
+                                );
+                                wg_stop($node);
+                            } elseif (get_stat_hash($statHandle)['interface'] != wg_reconfigure_hash($node)) {
                                 // Fluent reloading not supported for this instance, make sure the user is informed
                                 syslog(
                                     LOG_NOTICE,
