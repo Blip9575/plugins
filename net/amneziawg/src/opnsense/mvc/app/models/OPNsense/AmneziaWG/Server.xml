@@ -136,6 +136,40 @@
                     <Mask>/^( *&lt;(b 0x([0-9a-fA-F]{2})+|r [0-9]+|rc [0-9]+|rd [0-9]+|t|c)&gt;)+ *$/</Mask>
                     <ValidationMessage>Use CPS tags: &lt;b 0x..&gt; (even number of hex digits) &lt;r N&gt; &lt;rc N&gt; &lt;rd N&gt; &lt;t&gt; &lt;c&gt;.</ValidationMessage>
                 </i5>
+                <!-- AmneziaWG 3.x [Interface], all optional -->
+                <headerprotectionkey type="Base64Field"/>
+                <contentpaddingaddition type="TextField">
+                    <Mask>/^[0-9]{1,5}(-[0-9]{1,5})?$/</Mask>
+                    <ValidationMessage>Enter a number or a range (e.g. 10-20).</ValidationMessage>
+                </contentpaddingaddition>
+                <rekeyaftertime type="TextField">
+                    <Mask>/^[0-9]{1,5}(-[0-9]{1,5})?$/</Mask>
+                    <ValidationMessage>Enter a number or a range (e.g. 10-20).</ValidationMessage>
+                </rekeyaftertime>
+                <rekeytimeout type="TextField">
+                    <Mask>/^[0-9]{1,5}(-[0-9]{1,5})?$/</Mask>
+                    <ValidationMessage>Enter a number or a range (e.g. 10-20).</ValidationMessage>
+                </rekeytimeout>
+                <rejectaftertime type="TextField">
+                    <Mask>/^[0-9]{1,5}(-[0-9]{1,5})?$/</Mask>
+                    <ValidationMessage>Enter a number or a range (e.g. 10-20).</ValidationMessage>
+                </rejectaftertime>
+                <keepalivetimeout type="TextField">
+                    <Mask>/^[0-9]{1,5}(-[0-9]{1,5})?$/</Mask>
+                    <ValidationMessage>Enter a number or a range (e.g. 10-20).</ValidationMessage>
+                </keepalivetimeout>
+                <maxhandshakeattempts type="TextField">
+                    <Mask>/^[0-9]{1,5}(-[0-9]{1,5})?$/</Mask>
+                    <ValidationMessage>Enter a number or a range (e.g. 10-20).</ValidationMessage>
+                </maxhandshakeattempts>
+                <randomtrailers type="BooleanField">
+                    <Default>0</Default>
+                    <Required>Y</Required>
+                </randomtrailers>
+                <disablecookies type="BooleanField">
+                    <Default>0</Default>
+                    <Required>Y</Required>
+                </disablecookies>
                 <cnfFilename type="TextField" volatile="true"/>
                 <statFilename type="TextField" volatile="true"/>
                 <interface type="TextField" volatile="true"/>
