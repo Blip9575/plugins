@@ -1,0 +1,6 @@
+# stop the tunnels and remove their runtime configuration, it contains the private keys
+for IF in $(/sbin/ifconfig -g amneziawg 2> /dev/null); do
+	/sbin/ifconfig ${IF} destroy
+done
+rm -f /usr/local/etc/amneziawg/awg*
+rmdir /usr/local/etc/amneziawg 2> /dev/null || true

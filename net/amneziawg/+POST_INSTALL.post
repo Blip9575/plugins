@@ -1,0 +1,1 @@
+if [ -f /usr/local/sbin/configctl ]; then echo "Starting AmneziaWG instances"; /usr/local/sbin/configctl amneziawg configure; fi
