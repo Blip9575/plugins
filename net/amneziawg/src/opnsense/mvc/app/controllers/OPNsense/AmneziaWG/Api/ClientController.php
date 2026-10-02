@@ -190,11 +190,20 @@ class ClientController extends ApiMutableModelControllerBase
                     foreach (
                         ['jc' => 'Jc', 'jmin' => 'Jmin', 'jmax' => 'Jmax', 's1' => 'S1', 's2' => 'S2', 's3' => 'S3',
                          's4' => 'S4', 'h1' => 'H1', 'h2' => 'H2', 'h3' => 'H3', 'h4' => 'H4', 'i1' => 'I1',
-                         'i2' => 'I2', 'i3' => 'I3', 'i4' => 'I4', 'i5' => 'I5'
+                         'i2' => 'I2', 'i3' => 'I3', 'i4' => 'I4', 'i5' => 'I5',
+                         'headerprotectionkey' => 'HeaderProtectionKey',
+                         'contentpaddingaddition' => 'ContentPaddingAddition', 'rekeyaftertime' => 'RekeyAfterTime',
+                         'rekeytimeout' => 'RekeyTimeout', 'rejectaftertime' => 'RejectAfterTime',
+                         'keepalivetimeout' => 'KeepaliveTimeout', 'maxhandshakeattempts' => 'MaxHandshakeAttempts'
                         ] as $field => $name
                     ) {
                         if ((string)$node->$field !== '') {
                             $result['awg'][$name] = (string)$node->$field;
+                        }
+                    }
+                    foreach (['randomtrailers' => 'RandomTrailers', 'disablecookies' => 'DisableCookies'] as $field => $name) {
+                        if ((string)$node->$field === '1') {
+                            $result['awg'][$name] = 'on';
                         }
                     }
                     foreach (array_filter(explode(',', (string)$node->tunneladdress)) as $addr) {
