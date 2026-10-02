@@ -43,16 +43,7 @@ if sp.returncode == 0:
         parts = line.split("\t")
         # parse fields as explained in 'man wg'
         record['if'] = parts[0] if len(parts) else None
-        if len(parts) == 5:
-            # intentially skip private key, should not expose it
-            record['type'] = 'interface'
-            record['public-key'] = parts[2]
-            record['listen-port'] = parts[3]
-            record['fwmark'] = parts[4]
-            # convenience, copy listen-port to endpoint
-            record['endpoint'] = parts[3]
-            record['status'] = interfaces.get(record['if'], 'down')
-        elif len(parts) == 9:
+        if len(parts) == 9:
             record['type'] = 'peer'
             record['public-key'] = parts[1]
             # intentially skip preshared-key, should not expose it
@@ -62,6 +53,16 @@ if sp.returncode == 0:
             record['transfer-rx'] = int(parts[6]) if parts[6].isdigit() else 0
             record['transfer-tx'] = int(parts[7]) if parts[7].isdigit() else 0
             record['persistent-keepalive'] = parts[8]
+        elif len(parts) >= 5:
+            # interface lines carry the obfuscation parameters and a tools version dependent number
+            # of columns, fwmark is always last. private key and obfuscation values are not exposed
+            record['type'] = 'interface'
+            record['public-key'] = parts[2]
+            record['listen-port'] = parts[3]
+            record['fwmark'] = parts[-1]
+            # convenience, copy listen-port to endpoint
+            record['endpoint'] = parts[3]
+            record['status'] = interfaces.get(record['if'], 'down')
         else:
             continue
         result['records'].append(record)
