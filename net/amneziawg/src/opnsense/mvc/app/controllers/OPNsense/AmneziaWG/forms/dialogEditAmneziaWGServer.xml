@@ -131,23 +131,19 @@
         </grid_view>
     </field>
     <field>
-        <type>header</type>
+        <id>server.awg2_profile</id>
         <label>AmneziaWG 2.0</label>
-        <collapse>true</collapse>
-    </field>
-    <field>
-        <id>server.awg2_port</id>
-        <label>UDP Port Range</label>
-        <type>info</type>
-        <help>Recommended UDP port for the protocol that the generated profile imitates, set it as Port of this instance. Filled in by the Random and protocol buttons, nothing is saved.</help>
+        <type>dropdown</type>
+        <help>Protocol to imitate when the gear button generates a new profile. None generates nothing, Random generates the parameters without imitating a protocol. The parameters are shown in advanced mode, peers need the new configuration.</help>
         <grid_view>
-            <ignore>true</ignore>
+            <visible>false</visible>
         </grid_view>
     </field>
     <field>
         <id>server.jc</id>
         <label>Junk packet count (Jc)</label>
         <type>text</type>
+        <advanced>true</advanced>
         <help>Number of junk packets sent before each handshake, 0-128 (recommended 3-10). Leave all obfuscation fields empty for plain WireGuard compatibility.</help>
         <grid_view>
             <visible>false</visible>
@@ -157,6 +153,7 @@
         <id>server.jmin</id>
         <label>Junk packet minimum size (Jmin)</label>
         <type>text</type>
+        <advanced>true</advanced>
         <help>Minimum size of a junk packet, must be smaller than Jmax (recommended about 8).</help>
         <grid_view>
             <visible>false</visible>
@@ -166,6 +163,7 @@
         <id>server.jmax</id>
         <label>Junk packet maximum size (Jmax)</label>
         <type>text</type>
+        <advanced>true</advanced>
         <help>Maximum size of a junk packet, up to 1280 (recommended about 80).</help>
         <grid_view>
             <visible>false</visible>
@@ -175,6 +173,7 @@
         <id>server.s1</id>
         <label>Init packet prefix (S1)</label>
         <type>text</type>
+        <advanced>true</advanced>
         <help>Random prefix length of handshake initiation packets, 0-1304 (recommended 15-150). Must match on both ends.</help>
         <grid_view>
             <visible>false</visible>
@@ -184,6 +183,7 @@
         <id>server.s2</id>
         <label>Response packet prefix (S2)</label>
         <type>text</type>
+        <advanced>true</advanced>
         <help>Random prefix length of handshake response packets, 0-1360 (recommended 15-150). Must match on both ends.</help>
         <grid_view>
             <visible>false</visible>
@@ -193,6 +193,7 @@
         <id>server.s3</id>
         <label>Cookie padding (S3)</label>
         <type>text</type>
+        <advanced>true</advanced>
         <help>Random prefix length of cookie reply packets, 0-1388 (recommended 15-150). Must match on both ends.</help>
         <grid_view>
             <visible>false</visible>
@@ -202,6 +203,7 @@
         <id>server.s4</id>
         <label>Transport padding (S4)</label>
         <type>text</type>
+        <advanced>true</advanced>
         <help>Random prefix length of transport data packets, 0-160 (recommended 15-32). Lowers the usable MTU of the interface. Must match on both ends.</help>
         <grid_view>
             <visible>false</visible>
@@ -211,6 +213,7 @@
         <id>server.h1</id>
         <label>Header initiation (H1)</label>
         <type>text</type>
+        <advanced>true</advanced>
         <help>Number or range a-b from 5 to 4294967295 (a range picks a random value per packet). Must match on both ends. Values and ranges must not overlap. Leave empty for the standard WireGuard value.</help>
         <grid_view>
             <visible>false</visible>
@@ -220,6 +223,7 @@
         <id>server.h2</id>
         <label>Header response (H2)</label>
         <type>text</type>
+        <advanced>true</advanced>
         <help>Number or range a-b from 5 to 4294967295 (a range picks a random value per packet). Must match on both ends. Values and ranges must not overlap. Leave empty for the standard WireGuard value.</help>
         <grid_view>
             <visible>false</visible>
@@ -229,6 +233,7 @@
         <id>server.h3</id>
         <label>Header cookie reply (H3)</label>
         <type>text</type>
+        <advanced>true</advanced>
         <help>Number or range a-b from 5 to 4294967295 (a range picks a random value per packet). Must match on both ends. Values and ranges must not overlap. Leave empty for the standard WireGuard value.</help>
         <grid_view>
             <visible>false</visible>
@@ -238,6 +243,7 @@
         <id>server.h4</id>
         <label>Header transport (H4)</label>
         <type>text</type>
+        <advanced>true</advanced>
         <help>Number or range a-b from 5 to 4294967295 (a range picks a random value per packet). Must match on both ends. Values and ranges must not overlap. Leave empty for the standard WireGuard value.</help>
         <grid_view>
             <visible>false</visible>

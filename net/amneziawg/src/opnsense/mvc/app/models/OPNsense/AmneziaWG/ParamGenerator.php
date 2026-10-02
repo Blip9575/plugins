@@ -48,13 +48,13 @@ class ParamGenerator
     private const H_LOW = 100000;
     private const H_HIGH = 4294967295;
 
-    /* recommended UDP port per imitated protocol, shown next to the buttons */
+    /* imitated protocols with their usual UDP port, the dropdown of the instance dialog lists them as "DNS (53)" */
     public const PROTOCOLS = [
-        'quic' => ['label' => 'QUIC', 'port' => '443', 'note' => ''],
-        'dns' => ['label' => 'DNS', 'port' => '53', 'note' => 'The DNS resolver of this firewall also uses port 53.'],
-        'sip' => ['label' => 'SIP', 'port' => '5060', 'note' => ''],
-        'stun' => ['label' => 'STUN', 'port' => '3478', 'note' => ''],
-        'ntp' => ['label' => 'NTP', 'port' => '123', 'note' => 'The time service of this firewall also uses port 123.'],
+        'dns' => ['label' => 'DNS', 'port' => '53'],
+        'ntp' => ['label' => 'NTP', 'port' => '123'],
+        'quic' => ['label' => 'QUIC', 'port' => '443'],
+        'sip' => ['label' => 'SIP', 'port' => '5060'],
+        'stun' => ['label' => 'STUN', 'port' => '3478'],
     ];
 
     public static function awg2(string $protocol = '')

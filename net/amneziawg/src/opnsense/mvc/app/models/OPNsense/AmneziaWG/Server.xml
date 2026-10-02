@@ -72,6 +72,20 @@
                     <Required>Y</Required>
                 </debug>
                 <!-- AmneziaWG 2.0 [Interface], all empty = plain WireGuard -->
+                <!-- profile chosen for the generator button of the dialog, only remembered, awg does not use it -->
+                <awg2_profile type="OptionField">
+                    <Required>Y</Required>
+                    <Default>none</Default>
+                    <OptionValues>
+                        <none value="none">None</none>
+                        <random value="random">Random</random>
+                        <dns value="dns">DNS (53)</dns>
+                        <ntp value="ntp">NTP (123)</ntp>
+                        <quic value="quic">QUIC (443)</quic>
+                        <sip value="sip">SIP (5060)</sip>
+                        <stun value="stun">STUN (3478)</stun>
+                    </OptionValues>
+                </awg2_profile>
                 <jc type="IntegerField">
                     <MinimumValue>0</MinimumValue>
                     <MaximumValue>128</MaximumValue>

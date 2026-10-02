@@ -44,25 +44,20 @@ class ServerController extends ApiMutableModelControllerBase
     }
 
     /**
-     * new random AmneziaWG 2.0 obfuscation parameters, the instance dialog fills them in. With a protocol (quic, dns,
-     * sip, stun, ntp) I1 imitates the start of a session of that protocol, the recommended UDP port is returned too
+     * new random AmneziaWG 2.0 obfuscation parameters for the profile chosen in the instance dialog: none generates
+     * nothing, random generates the parameters without a signature packet, a protocol (dns, ntp, quic, sip, stun)
+     * also sets I1 to a packet that imitates the start of a session of that protocol
      */
-    public function genParamsAction($protocol = '')
+    public function genParamsAction($profile = 'random')
     {
-        $protocol = strtolower((string)$protocol);
-        if ($protocol !== '' && !isset(ParamGenerator::PROTOCOLS[$protocol])) {
+        $profile = strtolower((string)$profile);
+        if ($profile === 'none') {
+            return ['status' => 'ok', 'params' => []];
+        } elseif ($profile !== 'random' && !isset(ParamGenerator::PROTOCOLS[$profile])) {
             return ['status' => 'failed'];
         }
-        $info = ParamGenerator::PROTOCOLS[$protocol] ??
-            ['label' => '', 'port' => 'any', 'note' => 'No protocol is imitated, any free UDP port works.'];
 
-        return [
-            'status' => 'ok',
-            'params' => ParamGenerator::awg2($protocol),
-            'protocol' => $info['label'],
-            'port' => $info['port'],
-            'note' => $info['note']
-        ];
+        return ['status' => 'ok', 'params' => ParamGenerator::awg2($profile)];
     }
 
     public function searchServerAction()
