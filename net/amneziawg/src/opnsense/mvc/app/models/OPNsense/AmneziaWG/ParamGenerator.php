@@ -65,14 +65,7 @@ class ParamGenerator
             'jmax' => (string)random_int(60, 100),
         ];
 
-        do {
-            $s = [random_int(15, 150), random_int(15, 150), random_int(15, 150)];
-            $ok = count(array_unique($s)) === 3 && $s[0] + 56 !== $s[1];
-        } while (!$ok);
-        $result['s1'] = (string)$s[0];
-        $result['s2'] = (string)$s[1];
-        $result['s3'] = (string)$s[2];
-        $result['s4'] = (string)random_int(15, 32);
+        $result += self::prefixes();
 
         /* one range in each quarter of the span, handed out in random order, so they can not overlap */
         $quarter = intdiv(self::H_HIGH - self::H_LOW, 4);
@@ -96,6 +89,40 @@ class ParamGenerator
         }
 
         return $result;
+    }
+
+    /**
+     * Random prefix sizes S1-S4 (awg(8): S1/S2/S3 15-150 and S4 15-32), S1, S2 and S3 differ from each other and
+     * S1 + 56 is not S2. Header protection needs S1-S4 of at least 12, these are always above that.
+     */
+    public static function prefixes()
+    {
+        do {
+            $s = [random_int(15, 150), random_int(15, 150), random_int(15, 150)];
+            $ok = count(array_unique($s)) === 3 && $s[0] + 56 !== $s[1];
+        } while (!$ok);
+
+        return [
+            's1' => (string)$s[0],
+            's2' => (string)$s[1],
+            's3' => (string)$s[2],
+            's4' => (string)random_int(15, 32),
+        ];
+    }
+
+    /**
+     * AmneziaWG 3.x profile: a new header protection key, 32 random bytes in the format of a WireGuard key (clamped
+     * like wg genkey does). The prefixes are only included when the caller found S1-S4 empty or below 12. Padding, the
+     * timers, RandomTrailers and DisableCookies are left alone, the documentation has no recommended values for them.
+     */
+    public static function awg3(bool $withPrefixes = false)
+    {
+        $key = random_bytes(32);
+        $key[0] = chr(ord($key[0]) & 248);
+        $key[31] = chr((ord($key[31]) & 127) | 64);
+        $result = ['headerprotectionkey' => base64_encode($key)];
+
+        return $withPrefixes ? $result + self::prefixes() : $result;
     }
 
     /** static bytes tag */

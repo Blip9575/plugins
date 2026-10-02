@@ -60,6 +60,23 @@ class ServerController extends ApiMutableModelControllerBase
         return ['status' => 'ok', 'params' => ParamGenerator::awg2($profile)];
     }
 
+    /**
+     * new AmneziaWG 3.x parameters for the profile chosen in the instance dialog: none generates nothing, random
+     * generates a header protection key. With prefixes set to 1 the S1-S4 prefix sizes are included too, the dialog
+     * asks for them when S1-S4 are empty or below the 12 that header protection requires
+     */
+    public function genParams3Action($profile = 'random', $prefixes = '0')
+    {
+        $profile = strtolower((string)$profile);
+        if ($profile === 'none') {
+            return ['status' => 'ok', 'params' => []];
+        } elseif ($profile !== 'random') {
+            return ['status' => 'failed'];
+        }
+
+        return ['status' => 'ok', 'params' => ParamGenerator::awg3((string)$prefixes === '1')];
+    }
+
     public function searchServerAction()
     {
         return $this->searchBase('servers.server');

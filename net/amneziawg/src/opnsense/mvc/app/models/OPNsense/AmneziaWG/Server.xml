@@ -77,7 +77,7 @@
                     <Required>Y</Required>
                     <Default>none</Default>
                     <OptionValues>
-                        <none value="none">None</none>
+                        <none value="none">Select UDP protocol to mimic</none>
                         <random value="random">Random</random>
                         <dns value="dns">DNS (53)</dns>
                         <ntp value="ntp">NTP (123)</ntp>
@@ -151,6 +151,15 @@
                     <ValidationMessage>Use CPS tags written in angle brackets: b 0x.. (an even number of hex digits), r N, rc N, rd N, t or c.</ValidationMessage>
                 </i5>
                 <!-- AmneziaWG 3.x [Interface], all optional -->
+                <!-- profile chosen for the generator button of the dialog, only remembered, awg does not use it -->
+                <awg3_profile type="OptionField">
+                    <Required>Y</Required>
+                    <Default>none</Default>
+                    <OptionValues>
+                        <none value="none">None</none>
+                        <random value="random">Random</random>
+                    </OptionValues>
+                </awg3_profile>
                 <headerprotectionkey type="Base64Field"/>
                 <contentpaddingaddition type="TextField">
                     <Mask>/^[0-9]{1,5}(-[0-9]{1,5})?$/</Mask>
