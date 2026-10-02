@@ -102,20 +102,29 @@
          */
         $("#control_label_server\\.pubkey").append($("#keygen_div").detach().show());
         /**
-         * Parameter generator in the AmneziaWG 2.0 header of the instance dialog. Replaces Jc, Jmin, Jmax, S1-S4 and
-         * H1-H4 with a new random profile and clears I1-I5, nothing is saved before the dialog is saved.
+         * Parameter generator next to the AmneziaWG 2.0 heading of the instance dialog. Random replaces Jc, Jmin,
+         * Jmax, S1-S4 and H1-H4 with a new random profile and clears I1-I5, a protocol button does the same and sets
+         * I1 to a packet that imitates that protocol. The recommended UDP port is shown in the first row, nothing is
+         * saved before the dialog is saved.
          */
         $("#{{ formGridAmneziaWGServer['edit_dialog_id'] }} thead b").filter(function () {
             return $(this).text().trim() === 'AmneziaWG 2.0';
-        }).closest('div').append($("#awg2gen_div").detach().show());
-        $("#awg2gen").click(function (event) {
+        }).after($("#awg2gen_div").detach().show());
+        $("#{{ formGridAmneziaWGServer['edit_dialog_id'] }}").on('show.bs.modal', function () {
+            $("#server\\.awg2_port").text('-');
+        });
+        $(".awg2gen").click(function (event) {
             event.stopPropagation(); /* do not fold the section */
             const $header = $(this).closest('thead');
-            ajaxGet("/api/amneziawg/server/gen_params", {}, function (data, status) {
+            const protocol = $(this).data('protocol');
+            ajaxGet("/api/amneziawg/server/gen_params" + (protocol ? '/' + protocol : ''), {}, function (data, status) {
                 if (data.status && data.status === 'ok') {
                     $.each(data.params, function (field, value) {
                         $("#server\\." + field).val(value);
                     });
+                    $("#server\\.awg2_port").text(
+                        data.port + (data.protocol ? ' (' + data.protocol + ')' : '') + (data.note ? ', ' + data.note : '')
+                    );
                     if ($header.next('tbody').is(':hidden')) {
                         $header.click(); /* show the new values */
                     }
@@ -455,10 +464,13 @@
               <i class="fa fa-fw fa-gear"></i>
             </button>
         </span>
-        <span id="awg2gen_div" style="display:none" class="pull-right">
-            <button id="awg2gen" type="button" class="btn btn-secondary btn-xs" title="{{ lang._('Generate a new random AmneziaWG 2.0 profile. This replaces Jc, Jmin, Jmax, S1-S4 and H1-H4 and clears I1-I5.') }}" data-toggle="tooltip">
-              <i class="fa fa-fw fa-gear"></i>
-            </button>
+        <span id="awg2gen_div" style="display:none; margin-left: 15px;">
+            <button type="button" class="btn btn-default btn-xs awg2gen" data-protocol="" title="{{ lang._('Generate a new random AmneziaWG 2.0 profile. This replaces Jc, Jmin, Jmax, S1-S4 and H1-H4 and clears I1-I5. Peers need the new configuration.') }}" data-toggle="tooltip">{{ lang._('Random') }}</button>
+            <button type="button" class="btn btn-default btn-xs awg2gen" data-protocol="quic" title="{{ lang._('Generate a new random profile and set I1 to a QUIC Initial packet.') }}" data-toggle="tooltip">QUIC</button>
+            <button type="button" class="btn btn-default btn-xs awg2gen" data-protocol="dns" title="{{ lang._('Generate a new random profile and set I1 to a DNS query.') }}" data-toggle="tooltip">DNS</button>
+            <button type="button" class="btn btn-default btn-xs awg2gen" data-protocol="sip" title="{{ lang._('Generate a new random profile and set I1 to a SIP OPTIONS request.') }}" data-toggle="tooltip">SIP</button>
+            <button type="button" class="btn btn-default btn-xs awg2gen" data-protocol="stun" title="{{ lang._('Generate a new random profile and set I1 to a STUN binding request.') }}" data-toggle="tooltip">STUN</button>
+            <button type="button" class="btn btn-default btn-xs awg2gen" data-protocol="ntp" title="{{ lang._('Generate a new random profile and set I1 to an NTP client request.') }}" data-toggle="tooltip">NTP</button>
         </span>
         {{ partial('layout_partials/base_bootgrid_table', formGridAmneziaWGServer)}}
     </div>

@@ -44,11 +44,25 @@ class ServerController extends ApiMutableModelControllerBase
     }
 
     /**
-     * new random AmneziaWG 2.0 obfuscation parameters, the instance dialog fills them in
+     * new random AmneziaWG 2.0 obfuscation parameters, the instance dialog fills them in. With a protocol (quic, dns,
+     * sip, stun, ntp) I1 imitates the start of a session of that protocol, the recommended UDP port is returned too
      */
-    public function genParamsAction()
+    public function genParamsAction($protocol = '')
     {
-        return ['status' => 'ok', 'params' => ParamGenerator::awg2()];
+        $protocol = strtolower((string)$protocol);
+        if ($protocol !== '' && !isset(ParamGenerator::PROTOCOLS[$protocol])) {
+            return ['status' => 'failed'];
+        }
+        $info = ParamGenerator::PROTOCOLS[$protocol] ??
+            ['label' => '', 'port' => 'any', 'note' => 'No protocol is imitated, any free UDP port works.'];
+
+        return [
+            'status' => 'ok',
+            'params' => ParamGenerator::awg2($protocol),
+            'protocol' => $info['label'],
+            'port' => $info['port'],
+            'note' => $info['note']
+        ];
     }
 
     public function searchServerAction()
