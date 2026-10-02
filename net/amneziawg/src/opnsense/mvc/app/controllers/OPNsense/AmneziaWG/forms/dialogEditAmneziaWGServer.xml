@@ -371,7 +371,7 @@
         <label>Random trailers</label>
         <type>checkbox</type>
         <advanced>true</advanced>
-        <help>Adds random trailers to packets so handshake packets no longer have a fixed length. The Amnezia documentation recommends the same values for S1-S4 when this is enabled. Requires AmneziaWG 3.1 (amnezia-kmod and amnezia-tools 3.x), older versions reject this key and the instance will not start.</help>
+        <help>Adds random trailers to packets so handshake packets no longer have a fixed length. Must be the same on both ends, the handshake fails otherwise. The Amnezia documentation recommends the same values for S1-S4 when this is enabled. Requires AmneziaWG 3.1 (amnezia-kmod and amnezia-tools 3.x), older versions reject this key and the instance will not start.</help>
         <grid_view>
             <visible>false</visible>
             <type>boolean</type>
