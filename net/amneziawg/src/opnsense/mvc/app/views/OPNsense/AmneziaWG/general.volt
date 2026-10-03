@@ -184,6 +184,22 @@
                 $(".net_selector").replaceInputWithSelector(data);
             }
         });
+        /* no name could be made: switch the SNI source to the manual entry, a dropdown choice is cleared, typed text is kept */
+        const awg_sni_manual = function () {
+            const $selector = $("select[for='server.sni_source']");
+            const typed = $selector.val() === '<<empty_item>>';
+            $selector.val('<<empty_item>>').selectpicker('refresh').trigger('change');
+            if (!typed) {
+                $("#server\\.sni_source").val('');
+            }
+        };
+        /* saving an HTTP/3 or QUIC instance checks the source too: when core marks the row with an error, show the box */
+        new MutationObserver(function () {
+            if ($("#row_server\\.sni_source").hasClass('has-error')) {
+                awg_sni_manual();
+                $("#server\\.sni_source").focus();
+            }
+        }).observe($("#row_server\\.sni_source")[0], {attributes: true, attributeFilter: ['class']});
         const awg_params_url = function (profile) {
             return "/api/amneziawg/server/gen_params/" + profile + "?source=" + encodeURIComponent($("#server\\.sni_source").val() || '');
         };
@@ -200,13 +216,7 @@
                         }
                         awg_header_update();
                     } else if (data.message) {
-                        /* no name could be made: switch the SNI source to the manual entry, a dropdown choice is cleared, typed text is kept */
-                        const $selector = $("select[for='server.sni_source']");
-                        const typed = $selector.val() === '<<empty_item>>';
-                        $selector.val('<<empty_item>>').selectpicker('refresh').trigger('change');
-                        if (!typed) {
-                            $("#server\\.sni_source").val('');
-                        }
+                        awg_sni_manual();
                         stdDialogInform(
                             "{{ lang._('Nothing was changed') }}", $("<div></div>").text(htmlDecode(data.message)),
                             "{{ lang._('Close') }}", function () { $("#server\\.sni_source").focus(); }, "warning"

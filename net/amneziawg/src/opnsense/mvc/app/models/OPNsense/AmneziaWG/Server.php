@@ -125,6 +125,15 @@ class Server extends BaseModel
                 }
             }
 
+            /* the server name of the HTTP/3 and QUIC packets needs a source that gives a name, there is no fallback */
+            if (in_array((string)$node->awg2_profile, ['http3', 'quic'], true)) {
+                try {
+                    SniSource::resolve((string)$node->sni_source);
+                } catch (\RuntimeException $e) {
+                    $messages->appendMessage(new Message($e->getMessage(), $key . '.sni_source'));
+                }
+            }
+
             /* signature packets, kernel limit for AWG strings is 4096 */
             foreach (['i1', 'i2', 'i3', 'i4', 'i5'] as $field) {
                 if (strlen((string)$node->$field) > 4096) {
