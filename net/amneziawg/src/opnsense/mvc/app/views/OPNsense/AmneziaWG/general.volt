@@ -147,6 +147,56 @@
          * changed values, so the dialog always asks first and says so when peers are selected.
          */
         $("#control_label_server\\.awg2_profile").append($("#awg2gen_div").detach().show());
+        /**
+         * MTU cost of the parameters, shown under the protocol row. Measured with amnezia-kmod 3.1.0 (AmneziaWG/notes/06): of all options only
+         * S4 lowers the MTU of the tunnel interface, 1420 up to S4 12, then 1408 - 16 * floor((S4 - 13) / 16). An MTU set in the instance wins.
+         * The signature packets are sent unchanged, the path to the firewall must carry their size plus the IP and UDP headers.
+         */
+        const awg_typical = {
+            http3: 'two packets of 1200-1232 bytes', quic: 'one packet of 1200-1232 bytes', dns: 'one packet of 38-63 bytes',
+            ntp: 'one packet of 48 bytes', stun: 'one packet of 20 bytes', sip: 'one packet of 268-295 bytes'
+        };
+        const awg_cps_bytes = function (value) {
+            let bytes = 0;
+            (String(value || '').match(/<(?:b 0x[0-9a-fA-F]+|(?:r|rc|rd) [0-9]+|t|c)>/g) || []).forEach(function (tag) {
+                const m = tag.match(/^<(?:b 0x([0-9a-fA-F]+)|(?:r|rc|rd) ([0-9]+)|t|c)>$/);
+                bytes += m[1] ? m[1].length / 2 : (m[2] ? parseInt(m[2], 10) : 4);
+            });
+            return bytes;
+        };
+        const awg_tunnel_mtu = function (s4) {
+            return (isNaN(s4) || s4 <= 12) ? 1420 : 1408 - 16 * Math.floor((s4 - 13) / 16);
+        };
+        const awg_mtu_update = function () {
+            const s4 = parseInt($("#server\\.s4").val(), 10);
+            const auto = awg_tunnel_mtu(s4);
+            const set = parseInt($("#server\\.mtu").val(), 10);
+            const lines = [];
+            if (!isNaN(set)) {
+                lines.push("{{ lang._('MTU is set to') }} " + set + " ({{ lang._('S4 alone would give') }} " + auto + ")." +
+                    (set > auto ? " {{ lang._('That is more than the S4 value leaves, large packets will not fit the path.') }}" : ""));
+            } else if (auto < 1420) {
+                lines.push("{{ lang._('Tunnel MTU') }} " + auto + " (" + (1420 - auto) + " {{ lang._('bytes less than 1420, S4 is') }} " + s4 + ").");
+            } else {
+                lines.push("{{ lang._('Tunnel MTU') }} 1420 ({{ lang._('no cost, S4 is empty or at most 12') }}).");
+            }
+            const sizes = ['i1', 'i2', 'i3', 'i4', 'i5'].map(function (f) {
+                return awg_cps_bytes($("#server\\." + f).val());
+            }).filter(function (n) { return n > 0; });
+            if (sizes.length > 0) {
+                const largest = Math.max.apply(null, sizes);
+                lines.push("{{ lang._('Signature packets') }}: " + sizes.join(' + ') + " {{ lang._('bytes, the largest needs a path MTU of at least') }} " +
+                    (largest + 28) + " (IPv4) / " + (largest + 48) + " (IPv6).");
+            }
+            const profile = $("#server\\.awg2_profile").val();
+            if (awg_typical[profile]) {
+                lines.push("{{ lang._('A new') }} " + $("#server\\.awg2_profile option:selected").text() + " {{ lang._('profile has S4 15-32 (tunnel MTU 1408 or 1392) and') }} " + awg_typical[profile] + ".");
+            }
+            $("#server\\.mtu_cost").empty().append(lines.map(function (line) { return $("<div></div>").text(line); }));
+        };
+        $("#server\\.s4, #server\\.mtu, #server\\.i1, #server\\.i2, #server\\.i3, #server\\.i4, #server\\.i5").on('input change', awg_mtu_update);
+        $("#server\\.awg2_profile").on('change', awg_mtu_update);
+        $("#{{ formGridAmneziaWGServer['edit_dialog_id'] }}").on('shown.bs.modal', awg_mtu_update);
         const awg_generate = function (url, message, on_cancel) {
             const apply = function () {
                 ajaxGet(url, {}, function (data, status) {
@@ -155,6 +205,7 @@
                             /* the response is HTML escaped for the browser, I1 contains angle brackets */
                             $("#server\\." + field).val(htmlDecode(value));
                         });
+                        awg_mtu_update();
                     }
                 });
             };
@@ -209,20 +260,26 @@
                 "{{ lang._('Generate new parameters? The AmneziaWG 2.0 parameters (Jc, Jmin, Jmax, S1-S4, H1-H4 and I1-I5) are replaced.') }}"
             );
         });
-        /* click, not change: loading the form sets the box without a click */
+        /* click, not change: loading the form sets the box without a click. Ticking and clearing both change what the instance sends,
+         * so both ask: ticked generates a header protection key (and S1-S4 when needed), cleared generates a new AmneziaWG 2.0 profile */
         $("#server\\.awg3_enabled").on('click', function () {
-            if (!$(this).is(':checked')) {
-                return;
+            if ($(this).is(':checked')) {
+                const prefixes = ['s1', 's2', 's3', 's4'];
+                const need_prefixes = prefixes.some(function (field) {
+                    const value = parseInt($("#server\\." + field).val(), 10);
+                    return isNaN(value) || value < 12;
+                });
+                awg_generate(
+                    "/api/amneziawg/server/gen_params3/" + (need_prefixes ? '1' : '0'),
+                    "{{ lang._('Generate new parameters now? A new header protection key is generated, and S1-S4 when they are below 12. Existing values are replaced.') }}"
+                );
+            } else {
+                const profile = $("#server\\.awg2_profile").val();
+                awg_generate(
+                    "/api/amneziawg/server/gen_params/" + (profile && profile !== 'none' ? profile : 'random'),
+                    "{{ lang._('Generate new parameters now? AmneziaWG 3.x is switched off, its values are kept but not used. A new AmneziaWG 2.0 profile is generated for the selected protocol (Random when none is selected), the AmneziaWG 2.0 parameters are replaced.') }}"
+                );
             }
-            const prefixes = ['s1', 's2', 's3', 's4'];
-            const need_prefixes = prefixes.some(function (field) {
-                const value = parseInt($("#server\\." + field).val(), 10);
-                return isNaN(value) || value < 12;
-            });
-            awg_generate(
-                "/api/amneziawg/server/gen_params3/" + (need_prefixes ? '1' : '0'),
-                "{{ lang._('Generate new parameters now? A new header protection key is generated, and S1-S4 when they are below 12. Existing values are replaced.') }}"
-            );
         });
         $("#keygen").click(function(){
             ajaxGet("/api/amneziawg/server/key_pair", {}, function(data, status){

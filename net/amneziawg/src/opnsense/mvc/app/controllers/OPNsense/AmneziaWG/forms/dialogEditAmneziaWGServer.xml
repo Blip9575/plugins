@@ -141,6 +141,15 @@
         </grid_view>
     </field>
     <field>
+        <id>server.mtu_cost</id>
+        <label>MTU cost</label>
+        <type>info</type>
+        <help>What the parameters cost in MTU. With amnezia-kmod 3.1 only S4 lowers the MTU of the tunnel interface: 1420 up to S4 12, then 1408 for S4 13-28, 1392 for 29-44, 1376 for 45-60, and 16 less for every further 16. The other options and the signature packets do not change it. The signature packets are sent as they are before the handshake, the path to the firewall needs an MTU of their size plus 28 bytes (IPv4) or 48 bytes (IPv6). An MTU set in this instance is used as it is.</help>
+        <grid_view>
+            <ignore>true</ignore>
+        </grid_view>
+    </field>
+    <field>
         <id>server.jc</id>
         <label>Junk packet count (Jc)</label>
         <type>text</type>
