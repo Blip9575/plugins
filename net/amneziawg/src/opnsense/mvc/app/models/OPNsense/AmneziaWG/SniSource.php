@@ -32,11 +32,11 @@ use OPNsense\Core\Config;
 
 /**
  * Server name (SNI) for the HTTP/3 and QUIC signature packets. The source of an instance is
- *  - "list":                    the built-in list of ParamGenerator, a random one (resolve() gives null)
+ *  - "list":                    the built-in list of ParamGenerator, a random one (resolve() gives null), only when chosen
  *  - an interface (wan, lan...): reverse lookup of its address
  *  - an IP address:              reverse lookup of that address
  *  - a host name:                used as typed
- * There is no fallback: when no name results the user is told to enter the correct address or host name.
+ * There is no fallback, not even for an empty source: when no name results the user is told to enter the correct address or host name.
  */
 class SniSource
 {
@@ -126,7 +126,10 @@ class SniSource
     public static function resolve($source)
     {
         $source = trim((string)$source);
-        if ($source === '' || $source === 'list') {
+        if ($source === '') {
+            throw new \RuntimeException(gettext('The SNI source is empty, enter an address or a host name in the text box.'));
+        }
+        if ($source === 'list') {
             return [null, gettext('built-in list')];
         }
         $label = null;

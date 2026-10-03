@@ -74,8 +74,8 @@ class ServerController extends ApiMutableModelControllerBase
     }
 
     /**
-     * options for the SNI source of the dialog, in the format of the net_selector widget: a manual entry, the
-     * interfaces that have an address and the built-in list
+     * options for the SNI source of the dialog, in the format of the net_selector widget: the manual entry (labelled
+     * like the one of the firewall rules), the interfaces that have an address and the built-in list
      */
     public function getSniOptionsAction()
     {
@@ -83,7 +83,7 @@ class ServerController extends ApiMutableModelControllerBase
             return ['status' => 'failed'];
         }
         return [
-            'single' => ['label' => gettext('Manual entry: address or host name')],
+            'single' => ['label' => gettext('Single host or Network')],
             'interfaces' => ['label' => gettext('Interface address'), 'items' => SniSource::interfaces()],
             'other' => ['label' => gettext('Other'), 'items' => ['list' => gettext('Built-in list')]],
         ];

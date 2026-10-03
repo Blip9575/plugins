@@ -145,7 +145,7 @@
         <label>SNI source</label>
         <type>text</type>
         <style>net_selector</style>
-        <help>Where the server name in the TLS ClientHello of the HTTP/3 and QUIC signature packets comes from: the reverse lookup of the address of an interface (default WAN) or of an address, a host name as typed, or the built-in list. There is no fallback: when no name results, enter the correct address or host name here. Only used when the gear generates HTTP/3 or QUIC packets.</help>
+        <help>Where the server name in the TLS ClientHello of the HTTP/3 and QUIC signature packets comes from: the reverse lookup of the address of an interface (default WAN) or of an address, a host name as typed, or the built-in list. "Single host or Network" takes an address or a host name here. There is no fallback: when no name results, the entry switches to it and you enter the correct address or host name. Only used when the gear generates HTTP/3 or QUIC packets.</help>
         <grid_view>
             <ignore>true</ignore>
         </grid_view>

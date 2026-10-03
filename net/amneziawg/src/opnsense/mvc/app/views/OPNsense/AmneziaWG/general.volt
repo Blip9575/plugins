@@ -185,7 +185,7 @@
             }
         });
         const awg_params_url = function (profile) {
-            return "/api/amneziawg/server/gen_params/" + profile + "?source=" + encodeURIComponent($("#server\\.sni_source").val() || 'wan');
+            return "/api/amneziawg/server/gen_params/" + profile + "?source=" + encodeURIComponent($("#server\\.sni_source").val() || '');
         };
         const awg_generate = function (url, message, on_cancel) {
             const apply = function () {
@@ -200,9 +200,16 @@
                         }
                         awg_header_update();
                     } else if (data.message) {
+                        /* no name could be made: switch the SNI source to the manual entry, a dropdown choice is cleared, typed text is kept */
+                        const $selector = $("select[for='server.sni_source']");
+                        const typed = $selector.val() === '<<empty_item>>';
+                        $selector.val('<<empty_item>>').selectpicker('refresh').trigger('change');
+                        if (!typed) {
+                            $("#server\\.sni_source").val('');
+                        }
                         stdDialogInform(
                             "{{ lang._('Nothing was changed') }}", $("<div></div>").text(htmlDecode(data.message)),
-                            "{{ lang._('Close') }}", undefined, "warning"
+                            "{{ lang._('Close') }}", function () { $("#server\\.sni_source").focus(); }, "warning"
                         );
                     }
                 });
