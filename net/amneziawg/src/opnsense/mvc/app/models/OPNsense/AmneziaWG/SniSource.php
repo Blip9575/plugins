@@ -148,8 +148,8 @@ class SniSource
         }
         if (!self::isPublic($address)) {
             throw new \RuntimeException($label !== null
-                ? sprintf(gettext('%s assigned to %s is a private address, a reverse lookup finds nothing. Enter a public address or a host name in the text box.'), $address, $label)
-                : sprintf(gettext('%s is a private address, a reverse lookup finds nothing. Enter a public address or a host name in the text box.'), $address));
+                ? sprintf(gettext('%s assigned to %s is a private address, a reverse lookup has failed. Enter a public address or a host name in the text box.'), $address, $label)
+                : sprintf(gettext('%s is a private address, a reverse lookup has failed. Enter a public address or a host name in the text box.'), $address));
         }
         $name = self::reverse($address);
         if ($name === null) {
