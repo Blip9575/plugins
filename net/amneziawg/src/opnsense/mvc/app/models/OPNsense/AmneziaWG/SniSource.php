@@ -147,18 +147,16 @@ class SniSource
             throw new \RuntimeException(sprintf(gettext('"%s" is not an interface, an address or a host name, enter the correct address or host name in the text box.'), $source));
         }
         if (!self::isPublic($address)) {
-            throw new \RuntimeException(sprintf(
-                gettext('%s is a private address, a reverse lookup finds nothing. Enter the public address or a host name in the text box.'),
-                $label !== null ? $label . ' ' . $address : $address
-            ));
+            throw new \RuntimeException($label !== null
+                ? sprintf(gettext('%s assigned to %s is a private address, a reverse lookup finds nothing. Enter a public address or a host name in the text box.'), $address, $label)
+                : sprintf(gettext('%s is a private address, a reverse lookup finds nothing. Enter a public address or a host name in the text box.'), $address));
         }
         $name = self::reverse($address);
         if ($name === null) {
-            throw new \RuntimeException(sprintf(
-                gettext('The reverse lookup of %s gives no name. Enter the correct address or a host name in the text box.'),
-                $label !== null ? $label . ' ' . $address : $address
-            ));
+            throw new \RuntimeException($label !== null
+                ? sprintf(gettext('The reverse lookup of %s assigned to %s gives no name. Enter a public address or a host name in the text box.'), $address, $label)
+                : sprintf(gettext('The reverse lookup of %s gives no name. Enter a public address or a host name in the text box.'), $address));
         }
-        return [$name, sprintf(gettext('reverse lookup of %s'), $label !== null ? $label . ' ' . $address : $address)];
+        return [$name, $label !== null ? sprintf(gettext('reverse lookup of %s assigned to %s'), $address, $label) : sprintf(gettext('reverse lookup of %s'), $address)];
     }
 }
