@@ -360,7 +360,46 @@
         $("#configbuilder\\.output").css('max-width', '100%');
         $("#configbuilder\\.output").css('height', '256px');
         $("#configbuilder\\.output").on('input', function() {
-            $("#configbuilder\\.qrcode").empty().qrcode($(this).val());
+            const config = $(this).val();
+            $(".awg_download").prop('disabled', config === '');
+            try {
+                $("#configbuilder\\.qrcode").empty().qrcode(config);
+            } catch (e) {
+                /* a QR code holds a few kilobytes, signature packets of the HTTP/3 and QUIC profiles can exceed that */
+                $("#configbuilder\\.qrcode").empty().append(
+                    $("<p></p>").text(
+                        "{{ lang._('This configuration is too large for a QR code') }} (" + new Blob([config]).size +
+                        " {{ lang._('bytes') }}). {{ lang._('Download it as a file and import the file in the app. The file contains the private key.') }}"
+                    ),
+                    $('<button type="button" class="btn btn-default awg_download"></button>')
+                        .append('<i class="fa fa-fw fa-download"></i> {{ lang._('Download') }}')
+                );
+            }
+        });
+
+        /**
+         * Download the configuration as a file, next to the cancel button and in place of a QR code that does not fit
+         */
+        $("#btn_configbuilder_cancel").after(
+            ' <button type="button" id="awg_download" class="btn btn-default awg_download" disabled="disabled">' +
+            '<i class="fa fa-fw fa-download"></i> {{ lang._('Download') }}</button>'
+        );
+        $(document).on('click', '.awg_download', function () {
+            const config = $("#configbuilder\\.output").val();
+            const name = String($("#configbuilder\\.name").val() || '').replace(/[^A-Za-z0-9._-]+/g, '_').replace(/^\.+/, '');
+            stdDialogConfirm(
+                "{{ lang._('Download configuration') }}",
+                "{{ lang._('This file contains the private key of the peer. Keep it secure and delete it after importing it.') }}",
+                "{{ lang._('Download') }}", "{{ lang._('Cancel') }}",
+                function () {
+                    const link = $('<a></a>')
+                        .attr('href', 'data:text/plain;charset=utf-8,' + encodeURIComponent(config))
+                        .attr('download', (name || 'amneziawg') + '.conf')
+                        .appendTo('body');
+                    link[0].click();
+                    link.remove();
+                }
+            );
         });
 
         $("#configbuilder\\.servers").change(function(){
