@@ -8,7 +8,11 @@ This plugin is a port of the OPNsense core WireGuard implementation
 (opnsense/core fa31068e35f1) for the amnezia-kmod kernel module and the
 amnezia-tools package. Interfaces are named awg<N> and run next to core
 WireGuard. Peers are managed in the same way, the instance dialog has
-sections for the AmneziaWG 2.0 and 3.x options.
+rows for the AmneziaWG 2.0 and 3.x options. A generator fills the 2.0
+parameters, and for a chosen UDP protocol (HTTP/3, QUIC, DNS, NTP, STUN,
+SIP) it also sets signature packets that imitate the start of a session of
+that protocol. The HTTP/3 and QUIC packets are real QUIC Initial packets
+with a TLS 1.3 ClientHello.
 
 AmneziaWG 2.0 works with amnezia-kmod 2.0.x and amnezia-tools 1.0.20250903
 or later. The AmneziaWG 3.x options need amnezia-kmod and amnezia-tools 3.1
@@ -26,3 +30,10 @@ Plugin Changelog
 * AmneziaWG 3.x options: header protection key, content padding, rekey and
   reject timers, keepalive timeout, handshake attempts, random trailers, disable cookies
 * peer generator includes the obfuscation options in the generated configuration
+* parameter generator with a choice of a UDP protocol to imitate (Random, HTTP/3,
+  QUIC, DNS, NTP, STUN, SIP), asks before it replaces parameters
+* "Enable AmneziaWG 3.x" switch per instance, the 3.x options are only applied while it is on
+* peer configuration can be downloaded (peers list and peer generator), the peer generator
+  explains when a configuration is too large for a QR code
+* the version and build of the plugin are shown on the General page
+* works with CARP (the instance can depend on a CARP virtual IP) and the HA configuration sync
