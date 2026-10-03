@@ -148,55 +148,27 @@
          */
         $("#control_label_server\\.awg2_profile").append($("#awg2gen_div").detach().show());
         /**
-         * MTU cost of the parameters, shown under the protocol row. Measured with amnezia-kmod 3.1.0 (AmneziaWG/notes/06): of all options only
-         * S4 lowers the MTU of the tunnel interface, 1420 up to S4 12, then 1408 - 16 * floor((S4 - 13) / 16). An MTU set in the instance wins.
-         * The signature packets are sent unchanged, the path to the firewall must carry their size plus the IP and UDP headers.
+         * Header size per data packet, shown under the protocol row. WireGuard adds IP (20 IPv4, 40 IPv6) + UDP 8 + 32 = 60 / 80 bytes, AmneziaWG
+         * adds S4 and, with AmneziaWG 3.x, the content padding (measured with amnezia-kmod 3.1.0, AmneziaWG/notes/06). The padding is a number
+         * or a range a-b, a range adds a random amount.
          */
-        const awg_typical = {
-            http3: 'two packets of 1200-1232 bytes', quic: 'one packet of 1200-1232 bytes', dns: 'one packet of 38-63 bytes',
-            ntp: 'one packet of 48 bytes', stun: 'one packet of 20 bytes', sip: 'one packet of 268-295 bytes'
+        const awg_header_update = function () {
+            const s4 = parseInt($("#server\\.s4").val(), 10) || 0;
+            const padding = $("#server\\.awg3_enabled").is(':checked') ? String($("#server\\.contentpaddingaddition").val() || '').match(/^([0-9]+)(?:-([0-9]+))?$/) : null;
+            const lo = padding ? parseInt(padding[1], 10) : 0;
+            const hi = padding ? parseInt(padding[2] || padding[1], 10) : 0;
+            const part = function (base) {
+                const total = function (n) { return base + s4 + n; };
+                return base + (s4 > 0 ? " + S4 " + s4 : "") + (hi > 0 ? " + {{ lang._('padding') }} " + (lo === hi ? lo : lo + "-" + hi) : "") +
+                    (s4 > 0 || hi > 0 ? " = " + (lo === hi ? total(lo) : total(lo) + "-" + total(hi)) : "") + " {{ lang._('bytes') }}";
+            };
+            $("#server\\.header_size").text(
+                "{{ lang._('Header per data packet') }}: IPv4 " + part(60) + ", IPv6 " + part(80) + " ({{ lang._('WireGuard') }}: 60 {{ lang._('and') }} 80)."
+            );
         };
-        const awg_cps_bytes = function (value) {
-            let bytes = 0;
-            (String(value || '').match(/<(?:b 0x[0-9a-fA-F]+|(?:r|rc|rd) [0-9]+|t|c)>/g) || []).forEach(function (tag) {
-                const m = tag.match(/^<(?:b 0x([0-9a-fA-F]+)|(?:r|rc|rd) ([0-9]+)|t|c)>$/);
-                bytes += m[1] ? m[1].length / 2 : (m[2] ? parseInt(m[2], 10) : 4);
-            });
-            return bytes;
-        };
-        const awg_tunnel_mtu = function (s4) {
-            return (isNaN(s4) || s4 <= 12) ? 1420 : 1408 - 16 * Math.floor((s4 - 13) / 16);
-        };
-        const awg_mtu_update = function () {
-            const s4 = parseInt($("#server\\.s4").val(), 10);
-            const auto = awg_tunnel_mtu(s4);
-            const set = parseInt($("#server\\.mtu").val(), 10);
-            const lines = [];
-            if (!isNaN(set)) {
-                lines.push("{{ lang._('MTU is set to') }} " + set + " ({{ lang._('S4 alone would give') }} " + auto + ")." +
-                    (set > auto ? " {{ lang._('That is more than the S4 value leaves, large packets will not fit the path.') }}" : ""));
-            } else if (auto < 1420) {
-                lines.push("{{ lang._('Tunnel MTU') }} " + auto + " (" + (1420 - auto) + " {{ lang._('bytes less than 1420, S4 is') }} " + s4 + ").");
-            } else {
-                lines.push("{{ lang._('Tunnel MTU') }} 1420 ({{ lang._('no cost, S4 is empty or at most 12') }}).");
-            }
-            const sizes = ['i1', 'i2', 'i3', 'i4', 'i5'].map(function (f) {
-                return awg_cps_bytes($("#server\\." + f).val());
-            }).filter(function (n) { return n > 0; });
-            if (sizes.length > 0) {
-                const largest = Math.max.apply(null, sizes);
-                lines.push("{{ lang._('Signature packets') }}: " + sizes.join(' + ') + " {{ lang._('bytes, the largest needs a path MTU of at least') }} " +
-                    (largest + 28) + " (IPv4) / " + (largest + 48) + " (IPv6).");
-            }
-            const profile = $("#server\\.awg2_profile").val();
-            if (awg_typical[profile]) {
-                lines.push("{{ lang._('A new') }} " + $("#server\\.awg2_profile option:selected").text() + " {{ lang._('profile has S4 15-32 (tunnel MTU 1408 or 1392) and') }} " + awg_typical[profile] + ".");
-            }
-            $("#server\\.mtu_cost").empty().append(lines.map(function (line) { return $("<div></div>").text(line); }));
-        };
-        $("#server\\.s4, #server\\.mtu, #server\\.i1, #server\\.i2, #server\\.i3, #server\\.i4, #server\\.i5").on('input change', awg_mtu_update);
-        $("#server\\.awg2_profile").on('change', awg_mtu_update);
-        $("#{{ formGridAmneziaWGServer['edit_dialog_id'] }}").on('shown.bs.modal', awg_mtu_update);
+        $("#server\\.s4, #server\\.contentpaddingaddition").on('input change', awg_header_update);
+        $("#server\\.awg3_enabled").on('change', awg_header_update);
+        $("#{{ formGridAmneziaWGServer['edit_dialog_id'] }}").on('shown.bs.modal', awg_header_update);
         const awg_generate = function (url, message, on_cancel) {
             const apply = function () {
                 ajaxGet(url, {}, function (data, status) {
@@ -205,7 +177,7 @@
                             /* the response is HTML escaped for the browser, I1 contains angle brackets */
                             $("#server\\." + field).val(htmlDecode(value));
                         });
-                        awg_mtu_update();
+                        awg_header_update();
                     }
                 });
             };
