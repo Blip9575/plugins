@@ -122,7 +122,7 @@
          * changed values, so the dialog always asks first and says so when peers are selected.
          */
         $("#control_label_server\\.awg2_profile").append($("#awg2gen_div").detach().show());
-        const awg_generate = function (url, message) {
+        const awg_generate = function (url, message, on_cancel) {
             const apply = function () {
                 ajaxGet(url, {}, function (data, status) {
                     if (data.status && data.status === 'ok') {
@@ -137,11 +137,37 @@
             if (peers && peers.length > 0) {
                 message += " {{ lang._('This instance has peers. They stop connecting until they use a new configuration with the new values.') }}";
             }
-            stdDialogConfirm(
-                "{{ lang._('Generate new parameters') }}", message,
-                "{{ lang._('Yes') }}", "{{ lang._('Cancel') }}", apply
-            );
+            BootstrapDialog.confirm({
+                title: "{{ lang._('Generate new parameters') }}",
+                message: message,
+                type: BootstrapDialog.TYPE_WARNING,
+                btnCancelLabel: "{{ lang._('Cancel') }}",
+                btnOKLabel: "{{ lang._('Yes') }}",
+                btnOKClass: 'btn-warning',
+                callback: function (result) {
+                    if (result) {
+                        apply();
+                    } else if (on_cancel) {
+                        on_cancel();
+                    }
+                }
+            });
         };
+        /* a new protocol needs matching parameters, a user selection asks for them, cancelling keeps the old selection */
+        $("#server\\.awg2_profile").on('changed.bs.select', function (e, clickedIndex, isSelected, previousValue) {
+            const profile = $(this).val();
+            if (!profile || profile === 'none') {
+                return;
+            }
+            awg_generate(
+                "/api/amneziawg/server/gen_params/" + profile,
+                "{{ lang._('Generate new parameters? The AmneziaWG 2.0 parameters (Jc, Jmin, Jmax, S1-S4, H1-H4 and I1-I5) are replaced. Cancel returns to the previous selection.') }}",
+                function () {
+                    /* val() of selectpicker would fire the event again */
+                    $("#server\\.awg2_profile").val(previousValue).selectpicker('refresh');
+                }
+            );
+        });
         $("#awg2gen").click(function () {
             const profile = $("#server\\.awg2_profile").val();
             if (!profile || profile === 'none') {

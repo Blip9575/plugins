@@ -134,10 +134,9 @@
         <id>server.awg2_profile</id>
         <label>AmneziaWG 2.0</label>
         <type>dropdown</type>
-        <help>Protocol to imitate when the gear button generates new parameters. Random generates the parameters without imitating a protocol. On hotel and captive portal networks DNS (53) and NTP (123) are often redirected to local servers, which breaks the tunnel, HTTP/3 or QUIC (UDP 443) is the better choice there. The parameters are shown in advanced mode, peers need the new configuration.</help>
+        <help>Protocol to imitate when the gear button generates new parameters. Random generates the parameters without imitating a protocol. HTTP/3 or QUIC is recommended for captive portal networks. The parameters are shown in advanced mode, peers need the new configuration.</help>
         <grid_view>
             <label>AWG 2.0</label>
-            <width>14em</width>
             <formatter>awg2profile</formatter>
         </grid_view>
     </field>
@@ -305,10 +304,9 @@
         <id>server.awg3_enabled</id>
         <label>Enable AmneziaWG 3.x</label>
         <type>checkbox</type>
-        <help>Use the AmneziaWG 3.x parameters below (shown in advanced mode). When this is off they are kept but not applied. Requires amnezia-kmod and amnezia-tools 3.x, older versions reject these parameters and the instance does not start.</help>
+        <help>Use the AmneziaWG 3.x parameters below (shown in advanced mode). When this is off they are kept but not applied.</help>
         <grid_view>
             <label>AWG 3.x</label>
-            <width>8em</width>
             <type>boolean</type>
             <formatter>boolean</formatter>
         </grid_view>
