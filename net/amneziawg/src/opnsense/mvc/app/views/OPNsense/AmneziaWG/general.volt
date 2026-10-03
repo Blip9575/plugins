@@ -586,7 +586,7 @@
                 </select>
             </div>
         </div>
-        {{ partial('layout_partials/base_bootgrid_table', formGridAmneziaWGClient + {'command_width':'140'}) }}
+        {{ partial('layout_partials/base_bootgrid_table', formGridAmneziaWGClient + {'command_width':'150'}) }}
     </div>
     <div id="instances" class="tab-pane fade in active">
         <span id="keygen_div" style="display:none" class="pull-right">
