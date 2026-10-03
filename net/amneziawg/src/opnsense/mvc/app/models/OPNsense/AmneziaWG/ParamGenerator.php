@@ -100,7 +100,10 @@ class ParamGenerator
             $result[$field] = '';
         }
         if (isset(self::PROTOCOLS[$protocol])) {
-            $result['i1'] = self::$protocol();
+            /* one signature packet per datagram: I1, and I2 when the protocol opens with two packets */
+            foreach (array_values((array)self::$protocol()) as $idx => $packet) {
+                $result['i' . ($idx + 1)] = $packet;
+            }
         }
 
         return $result;
@@ -192,16 +195,20 @@ class ParamGenerator
         );
     }
 
-    /** HTTP/3 client: the way a browser opens a connection, empty source connection id, ALPN h3 */
+    /**
+     * HTTP/3 client, the way a current browser opens a connection: empty source connection id, ALPN h3 and the hybrid
+     * post-quantum key share X25519MLKEM768. That ClientHello is about 1.5 kB and does not fit in one datagram, so it
+     * is sent in two Initial packets, I1 and I2 (the keys and the connection id are those of a real connection start).
+     */
     private static function http3()
     {
-        return self::bytes(self::quicInitial(0));
+        return array_map(fn($packet) => self::bytes($packet), self::quicInitials(0, true));
     }
 
-    /** QUIC client of a general purpose library: a source connection id of 8 bytes, otherwise the same handshake */
+    /** QUIC client of a general purpose library: a source connection id of 8 bytes, x25519 only, one Initial packet */
     private static function quic()
     {
-        return self::bytes(self::quicInitial(8));
+        return array_map(fn($packet) => self::bytes($packet), self::quicInitials(8, false));
     }
 
     /** QUIC variable length integer (RFC 9000 section 16) */
@@ -234,9 +241,12 @@ class ParamGenerator
      * TLS 1.3 suites, x25519 key share, ALPN h3 and the QUIC transport parameters. Browsers shuffle the extension
      * order, so does this.
      */
-    private static function clientHello(string $sni, string $scid)
+    private static function clientHello(string $sni, string $scid, bool $hybrid)
     {
-        $groups = [0x001d, 0x0017, 0x0018];
+        /* X25519MLKEM768 (0x11ec): an ML-KEM-768 encapsulation key of 1184 bytes and an x25519 key of 32 bytes, the
+         * bytes are random, nobody can tell them from a key without the private part */
+        $groups = $hybrid ? [0x11ec, 0x001d, 0x0017, 0x0018] : [0x001d, 0x0017, 0x0018];
+        $shares = ($hybrid ? pack('nn', 0x11ec, 1216) . random_bytes(1216) : '') . pack('nn', 0x001d, 32) . random_bytes(32);
         $sigalgs = [0x0403, 0x0804, 0x0401, 0x0503, 0x0805, 0x0501, 0x0806, 0x0601];
         $params = '';
         foreach (
@@ -254,7 +264,7 @@ class ParamGenerator
             self::extension(16, pack('n', 3) . "\x02h3"),
             self::extension(43, "\x02\x03\x04"),
             self::extension(45, "\x01\x01"),
-            self::extension(51, pack('n', 36) . pack('nn', 0x001d, 32) . random_bytes(32)),
+            self::extension(51, pack('n', strlen($shares)) . $shares),
             self::extension(57, $params),
         ];
         for ($i = count($extensions) - 1; $i > 0; $i--) {
@@ -268,16 +278,16 @@ class ParamGenerator
     }
 
     /**
-     * QUIC version 1 client Initial packet of 1200-1252 bytes (RFC 9000 section 17.2.2, RFC 9001 section 5): 8 byte
-     * destination connection id, no token, a CRYPTO frame with the ClientHello of a random server name, padded with
-     * PADDING frames, protected with the Initial secret that is derived from the destination connection id.
+     * QUIC version 1 client Initial packets of 1200-1252 bytes each (RFC 9000 section 17.2.2, RFC 9001 section 5): 8
+     * byte destination connection id, no token, CRYPTO frames with the ClientHello of a random server name, padded with
+     * PADDING frames, protected with the Initial secret that is derived from the destination connection id. A
+     * ClientHello that does not fit in the first packet continues at its offset in a second packet (packet number 1).
      */
-    private static function quicInitial(int $scidLength)
+    private static function quicInitials(int $scidLength, bool $hybrid)
     {
         $dcid = random_bytes(8);
         $scid = $scidLength > 0 ? random_bytes($scidLength) : '';
-        $hello = self::clientHello(self::SNI[random_int(0, count(self::SNI) - 1)], $scid);
-        $frame = "\x06\x00" . self::varint(strlen($hello)) . $hello;
+        $hello = self::clientHello(self::SNI[random_int(0, count(self::SNI) - 1)], $scid, $hybrid);
 
         $secret = hash_hmac('sha256', $dcid, hex2bin('38762cf7f55934b34d179ae6a4c80cadccbb7f0a'), true);
         $secret = self::expandLabel($secret, 'client in', 32);
@@ -286,60 +296,41 @@ class ParamGenerator
         $hp = self::expandLabel($secret, 'quic hp', 16);
 
         $pnLength = 2;
-        $pn = 0;
-        $header = chr(0xC0 | ($pnLength - 1)) . "\x00\x00\x00\x01" . chr(8) . $dcid . chr($scidLength) . $scid . "\x00";
-        $total = random_int(1200, 1252);
-        $payloadLength = $total - strlen($header) - 2 - $pnLength - 16;
-        $payload = $frame . str_repeat("\x00", $payloadLength - strlen($frame));
-        $header .= pack('n', 0x4000 | ($pnLength + $payloadLength + 16));
-        $pnOffset = strlen($header);
-        $header .= pack('n', $pn);
+        $head = "\x00\x00\x00\x01" . chr(8) . $dcid . chr($scidLength) . $scid . "\x00";
+        $overhead = 1 + strlen($head) + 2 + $pnLength + 16; /* first byte, header, length, packet number, tag */
 
-        $nonce = substr($iv, 0, 10) . (substr($iv, 10) ^ pack('n', $pn));
-        $tag = '';
-        $encrypted = openssl_encrypt($payload, 'aes-128-gcm', $key, OPENSSL_RAW_DATA, $nonce, $tag, $header, 16);
-        $packet = $header . $encrypted . $tag;
+        $packets = [];
+        $offset = 0;
+        for ($pn = 0; $offset < strlen($hello) || $pn === 0; $pn++) {
+            $payloadLength = random_int(1200, 1252) - $overhead;
+            /* a CRYPTO frame is type, offset, length (two bytes) and the data */
+            $room = $payloadLength - 2 - strlen(self::varint($offset)) - 1;
+            $chunk = substr($hello, $offset, $room);
+            $payload = "\x06" . self::varint($offset) . self::varint(strlen($chunk)) . $chunk;
+            $payload .= str_repeat("\x00", $payloadLength - strlen($payload));
+            $offset += strlen($chunk);
 
-        /* header protection, the sample starts 4 bytes after the start of the packet number */
-        $mask = substr(openssl_encrypt(
-            substr($packet, $pnOffset + 4, 16),
-            'aes-128-ecb',
-            $hp,
-            OPENSSL_RAW_DATA | OPENSSL_ZERO_PADDING
-        ), 0, 5);
-        $packet[0] = chr(ord($packet[0]) ^ (ord($mask[0]) & 0x0f));
-        for ($i = 0; $i < $pnLength; $i++) {
-            $packet[$pnOffset + $i] = chr(ord($packet[$pnOffset + $i]) ^ ord($mask[1 + $i]));
+            $header = chr(0xC0 | ($pnLength - 1)) . $head . pack('n', 0x4000 | ($pnLength + $payloadLength + 16));
+            $pnOffset = strlen($header);
+            $header .= pack('n', $pn);
+            $nonce = substr($iv, 0, 10) . (substr($iv, 10) ^ pack('n', $pn));
+            $tag = '';
+            $encrypted = openssl_encrypt($payload, 'aes-128-gcm', $key, OPENSSL_RAW_DATA, $nonce, $tag, $header, 16);
+            $packet = $header . $encrypted . $tag;
+
+            /* header protection, the sample starts 4 bytes after the start of the packet number */
+            $mask = substr(openssl_encrypt(
+                substr($packet, $pnOffset + 4, 16),
+                'aes-128-ecb',
+                $hp,
+                OPENSSL_RAW_DATA | OPENSSL_ZERO_PADDING
+            ), 0, 5);
+            $packet[0] = chr(ord($packet[0]) ^ (ord($mask[0]) & 0x0f));
+            for ($i = 0; $i < $pnLength; $i++) {
+                $packet[$pnOffset + $i] = chr(ord($packet[$pnOffset + $i]) ^ ord($mask[1 + $i]));
+            }
+            $packets[] = $packet;
         }
-        return $packet;
-    }
-
-    /** SIP OPTIONS request (RFC 3261) */
-    private static function sip()
-    {
-        $host = '192.168.' . random_int(1, 254) . '.' . random_int(2, 254);
-        return self::text([
-            'OPTIONS sip:', [random_int(5, 9)], '@', [random_int(6, 10)], ".com SIP/2.0\r\n",
-            "Via: SIP/2.0/UDP {$host}:5060;branch=z9hG4bK", [10], "\r\n",
-            "Max-Forwards: 70\r\n",
-            'From: <sip:', [random_int(5, 9)], '@', [random_int(6, 10)], '.com>;tag=', [8], "\r\n",
-            'To: <sip:', [random_int(5, 9)], '@', [random_int(6, 10)], ".com>\r\n",
-            'Call-ID: ', [16], "@{$host}\r\n",
-            "CSeq: 1 OPTIONS\r\n",
-            "Content-Length: 0\r\n\r\n",
-        ]);
-    }
-
-    /** STUN Binding request (RFC 5389) with a random transaction id */
-    private static function stun()
-    {
-        return self::bytes("\x00\x01\x00\x00\x21\x12\xa4\x42") . self::random(12);
-    }
-
-    /** NTP version 4 client request (RFC 5905), the transmit timestamp is the current time */
-    private static function ntp()
-    {
-        $header = "\x23\x00" . chr(random_int(6, 10)) . chr(random_int(0xe8, 0xec));
-        return self::bytes($header . str_repeat("\x00", 36)) . '<t>' . self::random(4);
+        return $packets;
     }
 }
