@@ -278,7 +278,7 @@ class ParamGenerator
     }
 
     /**
-     * QUIC version 1 client Initial packets of 1200-1252 bytes each (RFC 9000 section 17.2.2, RFC 9001 section 5): 8
+     * QUIC version 1 client Initial packets of 1200-1232 bytes each (RFC 9000 section 17.2.2, RFC 9001 section 5): 8
      * byte destination connection id, no token, CRYPTO frames with the ClientHello of a random server name, padded with
      * PADDING frames, protected with the Initial secret that is derived from the destination connection id. A
      * ClientHello that does not fit in the first packet continues at its offset in a second packet (packet number 1).
@@ -302,7 +302,7 @@ class ParamGenerator
         $packets = [];
         $offset = 0;
         for ($pn = 0; $offset < strlen($hello) || $pn === 0; $pn++) {
-            $payloadLength = random_int(1200, 1252) - $overhead;
+            $payloadLength = random_int(1200, 1232) - $overhead;
             /* a CRYPTO frame is type, offset, length (two bytes) and the data */
             $room = $payloadLength - 2 - strlen(self::varint($offset)) - 1;
             $chunk = substr($hello, $offset, $room);
