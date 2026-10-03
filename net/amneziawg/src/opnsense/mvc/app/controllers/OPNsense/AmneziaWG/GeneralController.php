@@ -39,9 +39,23 @@ class GeneralController extends \OPNsense\Base\IndexController
         return $result;
     }
 
+    /**
+     * version and build of the installed package, from the version file the package installs (product_version and
+     * product_hash, the git hash of the plugins repository it was built from)
+     */
+    private function pluginVersion()
+    {
+        $info = json_decode((string)@file_get_contents('/usr/local/opnsense/version/amneziawg'), true);
+        if (empty($info['product_version'])) {
+            return '';
+        }
+        return $info['product_version'] . (!empty($info['product_hash']) ? ' (' . $info['product_hash'] . ')' : '');
+    }
+
     public function indexAction()
     {
         $this->view->generalForm = $this->getForm("general");
+        $this->view->amneziawgVersion = $this->pluginVersion();
 
         $this->view->formDialogEditAmneziaWGClient = $this->getForm("dialogEditAmneziaWGClient");
         $this->view->formGridAmneziaWGClient = $this->getFormGrid("dialogEditAmneziaWGClient");

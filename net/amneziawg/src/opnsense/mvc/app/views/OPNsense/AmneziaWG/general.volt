@@ -614,5 +614,8 @@
     {{ partial("layout_partials/base_form",['fields':generalForm,'id':'frm_general_settings'])}}
 </div>
 {{ partial('layout_partials/base_apply_button', {'data_endpoint': '/api/amneziawg/service/reconfigure'}) }}
+{% if amneziawgVersion %}
+<div class="text-muted" style="margin-top: 1em; margin-bottom: 1em;"><small>{{ lang._('AmneziaWG plugin') }} {{ amneziawgVersion|e }}</small></div>
+{% endif %}
 {{ partial("layout_partials/base_dialog",['fields':formDialogEditAmneziaWGClient,'id':formGridAmneziaWGClient['edit_dialog_id'],'label':lang._('Edit peer')])}}
 {{ partial("layout_partials/base_dialog",['fields':formDialogEditAmneziaWGServer,'id':formGridAmneziaWGServer['edit_dialog_id'],'label':lang._('Edit instance')])}}
