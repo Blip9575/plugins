@@ -87,6 +87,17 @@
                         <sip value="sip">SIP (5060)</sip>
                     </OptionValues>
                 </awg2_profile>
+                <!-- where the server name of the HTTP/3 and QUIC signature packets comes from: list, an interface, an address or a host name -->
+                <sni_source type="TextField">
+                    <Default>wan</Default>
+                    <Mask>/^(list|[A-Za-z0-9]([A-Za-z0-9._-]{0,251}[A-Za-z0-9])?|[0-9A-Fa-f:.]{2,45})$/</Mask>
+                    <ValidationMessage>Enter an interface, an address, a host name or list.</ValidationMessage>
+                </sni_source>
+                <!-- the server name of the packets that were generated last, shown in the dialog, awg does not use it -->
+                <sni_used type="TextField">
+                    <Mask>/^[A-Za-z0-9]([A-Za-z0-9._-]{0,251}[A-Za-z0-9])?$/</Mask>
+                    <ValidationMessage>Not a valid host name.</ValidationMessage>
+                </sni_used>
                 <jc type="IntegerField">
                     <MinimumValue>0</MinimumValue>
                     <MaximumValue>128</MaximumValue>

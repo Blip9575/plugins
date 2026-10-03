@@ -157,18 +157,36 @@
             const padding = $("#server\\.awg3_enabled").is(':checked') ? String($("#server\\.contentpaddingaddition").val() || '').match(/^([0-9]+)(?:-([0-9]+))?$/) : null;
             const lo = padding ? parseInt(padding[1], 10) : 0;
             const hi = padding ? parseInt(padding[2] || padding[1], 10) : 0;
-            const part = function (base) {
-                const total = function (n) { return base + s4 + n; };
-                return base + (s4 > 0 ? " + S4 " + s4 : "") + (hi > 0 ? " + {{ lang._('padding') }} " + (lo === hi ? lo : lo + "-" + hi) : "") +
-                    (s4 > 0 || hi > 0 ? " = " + (lo === hi ? total(lo) : total(lo) + "-" + total(hi)) : "") + " {{ lang._('bytes') }}";
+            const total = function (base) {
+                return lo === hi ? String(base + s4 + lo) : (base + s4 + lo) + "-" + (base + s4 + hi);
             };
-            $("#server\\.header_size").text(
-                "{{ lang._('Header per data packet') }}: IPv4 " + part(60) + ", IPv6 " + part(80) + " ({{ lang._('WireGuard') }}: 60 {{ lang._('and') }} 80)."
-            );
+            /* boxes without an id: the form does not send them */
+            const box = function (value) {
+                return $('<input type="text" readonly="readonly" class="form-control" style="display: inline-block; width: 9em; vertical-align: middle;"/>').val(value);
+            };
+            $("#server\\.header_size").empty().append("IPv4 ", box(total(60)), " IPv6 ", box(total(80)));
         };
         $("#server\\.s4, #server\\.contentpaddingaddition").on('input change', awg_header_update);
         $("#server\\.awg3_enabled").on('change', awg_header_update);
         $("#{{ formGridAmneziaWGServer['edit_dialog_id'] }}").on('shown.bs.modal', awg_header_update);
+        /* the server name rows only matter for the HTTP/3 and QUIC packets */
+        const awg_sni_rows = function () {
+            $("#row_server\\.sni_source, #row_server\\.sni_used").toggle(['http3', 'quic'].includes($("#server\\.awg2_profile").val()));
+        };
+        $("#server\\.awg2_profile").on('change', awg_sni_rows);
+        $("#{{ formGridAmneziaWGServer['edit_dialog_id'] }}").on('shown.bs.modal', function () {
+            awg_sni_rows();
+            $("#server\\.sni_source").trigger('change');   /* lets the selector show the stored value */
+        });
+        /* the SNI source is a dropdown with a manual entry, like the address fields of the firewall rules */
+        ajaxGet('/api/amneziawg/server/get_sni_options', {}, function (data, status) {
+            if (data.single) {
+                $(".net_selector").replaceInputWithSelector(data);
+            }
+        });
+        const awg_params_url = function (profile) {
+            return "/api/amneziawg/server/gen_params/" + profile + "?source=" + encodeURIComponent($("#server\\.sni_source").val() || 'wan');
+        };
         const awg_generate = function (url, message, on_cancel) {
             const apply = function () {
                 ajaxGet(url, {}, function (data, status) {
@@ -177,7 +195,15 @@
                             /* the response is HTML escaped for the browser, I1 contains angle brackets */
                             $("#server\\." + field).val(htmlDecode(value));
                         });
+                        if (url.indexOf('/gen_params/') !== -1) {
+                            $("#server\\.sni_used").val(htmlDecode(data.sni || ''));
+                        }
                         awg_header_update();
+                    } else if (data.message) {
+                        stdDialogInform(
+                            "{{ lang._('Nothing was changed') }}", $("<div></div>").text(htmlDecode(data.message)),
+                            "{{ lang._('Close') }}", undefined, "warning"
+                        );
                     }
                 });
             };
@@ -209,7 +235,7 @@
                 return;
             }
             awg_generate(
-                "/api/amneziawg/server/gen_params/" + profile,
+                awg_params_url(profile),
                 "{{ lang._('Generate new parameters? The AmneziaWG 2.0 parameters (Jc, Jmin, Jmax, S1-S4, H1-H4 and I1-I5) are replaced. Cancel returns to the previous selection.') }}",
                 function () {
                     /* val() of selectpicker would fire the event again */
@@ -228,7 +254,7 @@
                 return;
             }
             awg_generate(
-                "/api/amneziawg/server/gen_params/" + profile,
+                awg_params_url(profile),
                 "{{ lang._('Generate new parameters? The AmneziaWG 2.0 parameters (Jc, Jmin, Jmax, S1-S4, H1-H4 and I1-I5) are replaced.') }}"
             );
         });
@@ -248,7 +274,7 @@
             } else {
                 const profile = $("#server\\.awg2_profile").val();
                 awg_generate(
-                    "/api/amneziawg/server/gen_params/" + (profile && profile !== 'none' ? profile : 'random'),
+                    awg_params_url(profile && profile !== 'none' ? profile : 'random'),
                     "{{ lang._('Generate new parameters now? AmneziaWG 3.x is switched off, its values are kept but not used. A new AmneziaWG 2.0 profile is generated for the selected protocol (Random when none is selected), the AmneziaWG 2.0 parameters are replaced.') }}"
                 );
             }

@@ -72,7 +72,10 @@ class ParamGenerator
         'www.netflix.com',
     ];
 
-    public static function awg2(string $protocol = '')
+    /**
+     * @param string $sni server name for the HTTP/3 and QUIC signature packets, a random one of SNI when not given
+     */
+    public static function awg2(string $protocol = '', ?string $sni = null)
     {
         $result = [
             'jc' => (string)random_int(3, 10),
@@ -101,7 +104,7 @@ class ParamGenerator
         }
         if (isset(self::PROTOCOLS[$protocol])) {
             /* one signature packet per datagram: I1, and I2 when the protocol opens with two packets */
-            foreach (array_values((array)self::$protocol()) as $idx => $packet) {
+            foreach (array_values((array)self::$protocol($sni)) as $idx => $packet) {
                 $result['i' . ($idx + 1)] = $packet;
             }
         }
@@ -200,15 +203,15 @@ class ParamGenerator
      * post-quantum key share X25519MLKEM768. That ClientHello is about 1.5 kB and does not fit in one datagram, so it
      * is sent in two Initial packets, I1 and I2 (the keys and the connection id are those of a real connection start).
      */
-    private static function http3()
+    private static function http3(?string $sni = null)
     {
-        return array_map(fn($packet) => self::bytes($packet), self::quicInitials(0, true));
+        return array_map(fn($packet) => self::bytes($packet), self::quicInitials(0, true, $sni));
     }
 
     /** QUIC client of a general purpose library: a source connection id of 8 bytes, x25519 only, one Initial packet */
-    private static function quic()
+    private static function quic(?string $sni = null)
     {
-        return array_map(fn($packet) => self::bytes($packet), self::quicInitials(8, false));
+        return array_map(fn($packet) => self::bytes($packet), self::quicInitials(8, false, $sni));
     }
 
     /** QUIC variable length integer (RFC 9000 section 16) */
@@ -283,11 +286,11 @@ class ParamGenerator
      * PADDING frames, protected with the Initial secret that is derived from the destination connection id. A
      * ClientHello that does not fit in the first packet continues at its offset in a second packet (packet number 1).
      */
-    private static function quicInitials(int $scidLength, bool $hybrid)
+    private static function quicInitials(int $scidLength, bool $hybrid, ?string $sni = null)
     {
         $dcid = random_bytes(8);
         $scid = $scidLength > 0 ? random_bytes($scidLength) : '';
-        $hello = self::clientHello(self::SNI[random_int(0, count(self::SNI) - 1)], $scid, $hybrid);
+        $hello = self::clientHello($sni ?? self::SNI[random_int(0, count(self::SNI) - 1)], $scid, $hybrid);
 
         $secret = hash_hmac('sha256', $dcid, hex2bin('38762cf7f55934b34d179ae6a4c80cadccbb7f0a'), true);
         $secret = self::expandLabel($secret, 'client in', 32);

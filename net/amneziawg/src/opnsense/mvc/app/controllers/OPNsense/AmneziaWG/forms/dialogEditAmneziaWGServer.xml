@@ -141,10 +141,21 @@
         </grid_view>
     </field>
     <field>
-        <id>server.header_size</id>
-        <label>Header size</label>
-        <type>info</type>
-        <help>Bytes added to every data packet: the IP header (20 for IPv4, 40 for IPv6), UDP (8) and WireGuard (32) are 60 and 80 bytes, AmneziaWG adds S4 and, with AmneziaWG 3.x, the content padding (a range adds a random amount). Measured with amnezia-kmod 3.1.0. The MTU of the tunnel interface is lowered by the kernel module for S4 only, in steps of 16: 1420 up to S4 12, 1408 for S4 13-28, 1392 for 29-44, 1376 for 45-60 and so on, not for the content padding. An MTU set in this instance is used as it is.</help>
+        <id>server.sni_source</id>
+        <label>SNI source</label>
+        <type>text</type>
+        <style>net_selector</style>
+        <help>Where the server name in the TLS ClientHello of the HTTP/3 and QUIC signature packets comes from: the reverse lookup of the address of an interface (default WAN) or of an address, a host name as typed, or the built-in list. There is no fallback: when no name results, enter the correct address or host name here. Only used when the gear generates HTTP/3 or QUIC packets.</help>
+        <grid_view>
+            <ignore>true</ignore>
+        </grid_view>
+    </field>
+    <field>
+        <id>server.sni_used</id>
+        <label>SNI of the packets</label>
+        <type>text</type>
+        <readonly>true</readonly>
+        <help>The server name in the HTTP/3 or QUIC signature packets that were generated last. It is filled by the gear, if you change I1 or I2 by hand it may no longer match.</help>
         <grid_view>
             <ignore>true</ignore>
         </grid_view>
@@ -318,6 +329,15 @@
             <label>AWG 3.x</label>
             <type>boolean</type>
             <formatter>boolean</formatter>
+        </grid_view>
+    </field>
+    <field>
+        <id>server.header_size</id>
+        <label>AmneziaWG Header Size</label>
+        <type>info</type>
+        <help>Size of AmneziaWG 2.0 / 3.x header</help>
+        <grid_view>
+            <ignore>true</ignore>
         </grid_view>
     </field>
     <field>

@@ -32,6 +32,7 @@ namespace OPNsense\AmneziaWG\Api;
 use OPNsense\Base\ApiMutableModelControllerBase;
 use OPNsense\Core\Backend;
 use OPNsense\AmneziaWG\ParamGenerator;
+use OPNsense\AmneziaWG\SniSource;
 
 class ServerController extends ApiMutableModelControllerBase
 {
@@ -57,7 +58,35 @@ class ServerController extends ApiMutableModelControllerBase
             return ['status' => 'failed'];
         }
 
-        return ['status' => 'ok', 'params' => ParamGenerator::awg2($profile)];
+        $sni = null;
+        $via = '';
+        if ($profile === 'http3' || $profile === 'quic') {
+            /* the server name comes from the SNI source of the dialog (query parameter source), without a fallback */
+            try {
+                [$sni, $via] = SniSource::resolve($this->request->get('source', null, 'wan'));
+            } catch (\RuntimeException $e) {
+                return ['status' => 'failed', 'message' => $e->getMessage()];
+            }
+            $sni = $sni ?? ParamGenerator::SNI[random_int(0, count(ParamGenerator::SNI) - 1)];
+        }
+
+        return ['status' => 'ok', 'params' => ParamGenerator::awg2($profile, $sni), 'sni' => (string)$sni, 'sni_via' => $via];
+    }
+
+    /**
+     * options for the SNI source of the dialog, in the format of the net_selector widget: a manual entry, the
+     * interfaces that have an address and the built-in list
+     */
+    public function getSniOptionsAction()
+    {
+        if (!$this->request->isGet()) {
+            return ['status' => 'failed'];
+        }
+        return [
+            'single' => ['label' => gettext('Manual entry: address or host name')],
+            'interfaces' => ['label' => gettext('Interface address'), 'items' => SniSource::interfaces()],
+            'other' => ['label' => gettext('Other'), 'items' => ['list' => gettext('Built-in list')]],
+        ];
     }
 
     /**
