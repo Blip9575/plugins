@@ -333,4 +333,33 @@ class ParamGenerator
         }
         return $packets;
     }
+
+    /** SIP OPTIONS request (RFC 3261) */
+    private static function sip()
+    {
+        $host = '192.168.' . random_int(1, 254) . '.' . random_int(2, 254);
+        return self::text([
+            'OPTIONS sip:', [random_int(5, 9)], '@', [random_int(6, 10)], ".com SIP/2.0\r\n",
+            "Via: SIP/2.0/UDP {$host}:5060;branch=z9hG4bK", [10], "\r\n",
+            "Max-Forwards: 70\r\n",
+            'From: <sip:', [random_int(5, 9)], '@', [random_int(6, 10)], '.com>;tag=', [8], "\r\n",
+            'To: <sip:', [random_int(5, 9)], '@', [random_int(6, 10)], ".com>\r\n",
+            'Call-ID: ', [16], "@{$host}\r\n",
+            "CSeq: 1 OPTIONS\r\n",
+            "Content-Length: 0\r\n\r\n",
+        ]);
+    }
+
+    /** STUN Binding request (RFC 5389) with a random transaction id */
+    private static function stun()
+    {
+        return self::bytes("\x00\x01\x00\x00\x21\x12\xa4\x42") . self::random(12);
+    }
+
+    /** NTP version 4 client request (RFC 5905), the transmit timestamp is the current time */
+    private static function ntp()
+    {
+        $header = "\x23\x00" . chr(random_int(6, 10)) . chr(random_int(0xe8, 0xec));
+        return self::bytes($header . str_repeat("\x00", 36)) . '<t>' . self::random(4);
+    }
 }
