@@ -60,6 +60,31 @@
                         configbuilder_reference = cell.getData();
                         $('a[href="#configbuilder"]').tab('show');
                     }
+                },
+                download_peer: {
+                    filter: (cell) => !!cell.getData().privkey,
+                    classname: "fa fa-fw fa-download",
+                    title: "{{ lang._('Download configuration') }}",
+                    sequence: 1001,
+                    method: function(event, cell) {
+                        const row = cell.getData();
+                        ajaxGet('/api/amneziawg/client/get_server_info/' + row.servers, {}, function(data, status) {
+                            if (data.status === 'ok') {
+                                awg_download(buildPeerConfig({
+                                    privkey: row.privkey,
+                                    address: row.tunneladdress,
+                                    peer_dns: data.peer_dns,
+                                    mtu: data.mtu,
+                                    pubkey: data.pubkey,
+                                    awg: data.awg,
+                                    psk: row.psk,
+                                    endpoint: data.endpoint,
+                                    allowedips: data.allowed_ips || "0.0.0.0/0,::/0",
+                                    keepalive: row.keepalive
+                                }), row.name);
+                            }
+                        });
+                    }
                 }
             },
         });
@@ -156,7 +181,8 @@
         /* a new protocol needs matching parameters, a user selection asks for them, cancelling keeps the old selection */
         $("#server\\.awg2_profile").on('changed.bs.select', function (e, clickedIndex, isSelected, previousValue) {
             const profile = $(this).val();
-            if (!profile || profile === 'none') {
+            /* the event also follows programmatic changes, as when core loads the form: only a clicked option counts */
+            if (typeof clickedIndex !== 'number' || !profile || profile === 'none' || profile === previousValue) {
                 return;
             }
             awg_generate(
@@ -361,7 +387,6 @@
         $("#configbuilder\\.output").css('height', '256px');
         $("#configbuilder\\.output").on('input', function() {
             const config = $(this).val();
-            $(".awg_download").prop('disabled', config === '');
             try {
                 $("#configbuilder\\.qrcode").empty().qrcode(config);
             } catch (e) {
@@ -378,15 +403,11 @@
         });
 
         /**
-         * Download the configuration as a file, next to the cancel button and in place of a QR code that does not fit
+         * Save a configuration as a file after a warning, the file contains the private key of the peer. Used by the
+         * peers list and by the message that replaces a QR code which does not fit
          */
-        $("#btn_configbuilder_cancel").after(
-            ' <button type="button" id="awg_download" class="btn btn-default awg_download" disabled="disabled">' +
-            '<i class="fa fa-fw fa-download"></i> {{ lang._('Download') }}</button>'
-        );
-        $(document).on('click', '.awg_download', function () {
-            const config = $("#configbuilder\\.output").val();
-            const name = String($("#configbuilder\\.name").val() || '').replace(/[^A-Za-z0-9._-]+/g, '_').replace(/^\.+/, '');
+        const awg_download = function (config, peer_name) {
+            const name = String(peer_name || '').replace(/[^A-Za-z0-9._-]+/g, '_').replace(/^\.+/, '');
             stdDialogConfirm(
                 "{{ lang._('Download configuration') }}",
                 "{{ lang._('This file contains the private key of the peer. Keep it secure and delete it after importing it.') }}",
@@ -400,6 +421,9 @@
                     link.remove();
                 }
             );
+        };
+        $(document).on('click', '.awg_download', function () {
+            awg_download($("#configbuilder\\.output").val(), $("#configbuilder\\.name").val());
         });
 
         $("#configbuilder\\.servers").change(function(){
