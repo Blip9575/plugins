@@ -38,9 +38,11 @@ namespace OPNsense\AmneziaWG;
  * I1 is a packet that imitates the start of a session of that UDP protocol and I2-I5 are empty. The Amnezia
  * documentation only describes the syntax, it names QUIC, DNS and SIP and suggests capturing a real packet. The packets
  * here are built from the protocol specifications, the parts that change from packet to packet are random tags:
- * they have the layout of the protocol, they are not real sessions (the payload of a QUIC Initial is encrypted
- * with keys derived from its connection id, here it is random bytes). The <c> tag is not used, amneziawg-go does
- * not implement it.
+ * they have the layout of the protocol, they are not real sessions. The QUIC and HTTP/3 packets are real QUIC version 1
+ * Initial packets (RFC 9000, 9001) with a TLS 1.3 ClientHello inside, encrypted with the standard Initial keys, so
+ * a device that decrypts them sees a valid ClientHello. The packet is built once when the profile is generated and
+ * stays the same in every emission, because a signature packet can only hold fixed bytes and random tags, and the
+ * encrypted part can not be random. The <c> tag is not used, amneziawg-go does not implement it.
  */
 class ParamGenerator
 {
@@ -50,11 +52,24 @@ class ParamGenerator
 
     /* imitated protocols with their usual UDP port, the dropdown of the instance dialog lists them as "DNS (53)" */
     public const PROTOCOLS = [
+        'http3' => ['label' => 'HTTP/3', 'port' => '443'],
+        'quic' => ['label' => 'QUIC', 'port' => '443'],
         'dns' => ['label' => 'DNS', 'port' => '53'],
         'ntp' => ['label' => 'NTP', 'port' => '123'],
-        'quic' => ['label' => 'QUIC', 'port' => '443'],
-        'sip' => ['label' => 'SIP', 'port' => '5060'],
         'stun' => ['label' => 'STUN', 'port' => '3478'],
+        'sip' => ['label' => 'SIP', 'port' => '5060'],
+    ];
+
+    /**
+     * Server names for the TLS ClientHello inside the QUIC Initial packets, one is picked at random for each profile.
+     * This list is a choice of this plugin, no official source gives one: large, widely used hosts that mobile devices
+     * and laptops contact over HTTP/3 all day.
+     */
+    public const SNI = [
+        'www.google.com', 'www.youtube.com', 'fonts.gstatic.com', 'www.gstatic.com', 'i.ytimg.com',
+        'www.cloudflare.com', 'cdnjs.cloudflare.com', 'www.facebook.com', 'static.xx.fbcdn.net',
+        'www.instagram.com', 'www.microsoft.com', 'update.googleapis.com', 'www.apple.com', 'images.apple.com',
+        'www.netflix.com',
     ];
 
     public static function awg2(string $protocol = '')
@@ -177,13 +192,126 @@ class ParamGenerator
         );
     }
 
-    /** QUIC version 1 Initial (RFC 9000): long header, 8 byte destination connection id, no token, 1200+ bytes */
+    /** HTTP/3 client: the way a browser opens a connection, empty source connection id, ALPN h3 */
+    private static function http3()
+    {
+        return self::bytes(self::quicInitial(0));
+    }
+
+    /** QUIC client of a general purpose library: a source connection id of 8 bytes, otherwise the same handshake */
     private static function quic()
     {
+        return self::bytes(self::quicInitial(8));
+    }
+
+    /** QUIC variable length integer (RFC 9000 section 16) */
+    private static function varint(int $value)
+    {
+        if ($value < 0x40) {
+            return chr($value);
+        } elseif ($value < 0x4000) {
+            return pack('n', 0x4000 | $value);
+        }
+        return pack('N', 0x80000000 | $value);
+    }
+
+    /** HKDF-Expand-Label of TLS 1.3 with SHA-256 and an empty context, the output is at most one hash block */
+    private static function expandLabel(string $secret, string $label, int $length)
+    {
+        $label = 'tls13 ' . $label;
+        $info = pack('n', $length) . chr(strlen($label)) . $label . "\x00";
+        return substr(hash_hmac('sha256', $info . "\x01", $secret, true), 0, $length);
+    }
+
+    /** TLS extension */
+    private static function extension(int $type, string $data)
+    {
+        return pack('nn', $type, strlen($data)) . $data;
+    }
+
+    /**
+     * TLS 1.3 ClientHello for QUIC (RFC 8446, 9001): empty session id, TLS_AES_128_GCM_SHA256 and the other two
+     * TLS 1.3 suites, x25519 key share, ALPN h3 and the QUIC transport parameters. Browsers shuffle the extension
+     * order, so does this.
+     */
+    private static function clientHello(string $sni, string $scid)
+    {
+        $groups = [0x001d, 0x0017, 0x0018];
+        $sigalgs = [0x0403, 0x0804, 0x0401, 0x0503, 0x0805, 0x0501, 0x0806, 0x0601];
+        $params = '';
+        foreach (
+            [0x01 => self::varint(30000), 0x03 => self::varint(1472), 0x04 => self::varint(15728640),
+             0x05 => self::varint(6291456), 0x06 => self::varint(6291456), 0x07 => self::varint(6291456),
+             0x08 => self::varint(100), 0x09 => self::varint(100), 0x0e => self::varint(4), 0x0f => $scid,
+             27 + 31 * random_int(1, 100) => random_bytes(random_int(1, 16))] as $id => $value
+        ) {
+            $params .= self::varint($id) . self::varint(strlen($value)) . $value;
+        }
+        $extensions = [
+            self::extension(0, pack('n', strlen($sni) + 3) . "\x00" . pack('n', strlen($sni)) . $sni),
+            self::extension(10, pack('n', 2 * count($groups)) . pack('n*', ...$groups)),
+            self::extension(13, pack('n', 2 * count($sigalgs)) . pack('n*', ...$sigalgs)),
+            self::extension(16, pack('n', 3) . "\x02h3"),
+            self::extension(43, "\x02\x03\x04"),
+            self::extension(45, "\x01\x01"),
+            self::extension(51, pack('n', 36) . pack('nn', 0x001d, 32) . random_bytes(32)),
+            self::extension(57, $params),
+        ];
+        for ($i = count($extensions) - 1; $i > 0; $i--) {
+            $j = random_int(0, $i);
+            [$extensions[$i], $extensions[$j]] = [$extensions[$j], $extensions[$i]];
+        }
+        $extensions = implode('', $extensions);
+        $body = "\x03\x03" . random_bytes(32) . "\x00" . pack('n', 6) . "\x13\x01\x13\x02\x13\x03" . "\x01\x00" .
+            pack('n', strlen($extensions)) . $extensions;
+        return "\x01" . substr(pack('N', strlen($body)), 1) . $body;
+    }
+
+    /**
+     * QUIC version 1 client Initial packet of 1200-1252 bytes (RFC 9000 section 17.2.2, RFC 9001 section 5): 8 byte
+     * destination connection id, no token, a CRYPTO frame with the ClientHello of a random server name, padded with
+     * PADDING frames, protected with the Initial secret that is derived from the destination connection id.
+     */
+    private static function quicInitial(int $scidLength)
+    {
+        $dcid = random_bytes(8);
+        $scid = $scidLength > 0 ? random_bytes($scidLength) : '';
+        $hello = self::clientHello(self::SNI[random_int(0, count(self::SNI) - 1)], $scid);
+        $frame = "\x06\x00" . self::varint(strlen($hello)) . $hello;
+
+        $secret = hash_hmac('sha256', $dcid, hex2bin('38762cf7f55934b34d179ae6a4c80cadccbb7f0a'), true);
+        $secret = self::expandLabel($secret, 'client in', 32);
+        $key = self::expandLabel($secret, 'quic key', 16);
+        $iv = self::expandLabel($secret, 'quic iv', 12);
+        $hp = self::expandLabel($secret, 'quic hp', 16);
+
+        $pnLength = 2;
+        $pn = 0;
+        $header = chr(0xC0 | ($pnLength - 1)) . "\x00\x00\x00\x01" . chr(8) . $dcid . chr($scidLength) . $scid . "\x00";
         $total = random_int(1200, 1252);
-        $rest = $total - 18; /* everything after the length field: packet number and payload */
-        return self::bytes(chr(0xC0 | random_int(0, 15)) . "\x00\x00\x00\x01\x08") . self::random(8) .
-            self::bytes("\x00\x00" . pack('n', 0x4000 | $rest)) . self::random($rest);
+        $payloadLength = $total - strlen($header) - 2 - $pnLength - 16;
+        $payload = $frame . str_repeat("\x00", $payloadLength - strlen($frame));
+        $header .= pack('n', 0x4000 | ($pnLength + $payloadLength + 16));
+        $pnOffset = strlen($header);
+        $header .= pack('n', $pn);
+
+        $nonce = substr($iv, 0, 10) . (substr($iv, 10) ^ pack('n', $pn));
+        $tag = '';
+        $encrypted = openssl_encrypt($payload, 'aes-128-gcm', $key, OPENSSL_RAW_DATA, $nonce, $tag, $header, 16);
+        $packet = $header . $encrypted . $tag;
+
+        /* header protection, the sample starts 4 bytes after the start of the packet number */
+        $mask = substr(openssl_encrypt(
+            substr($packet, $pnOffset + 4, 16),
+            'aes-128-ecb',
+            $hp,
+            OPENSSL_RAW_DATA | OPENSSL_ZERO_PADDING
+        ), 0, 5);
+        $packet[0] = chr(ord($packet[0]) ^ (ord($mask[0]) & 0x0f));
+        for ($i = 0; $i < $pnLength; $i++) {
+            $packet[$pnOffset + $i] = chr(ord($packet[$pnOffset + $i]) ^ ord($mask[1 + $i]));
+        }
+        return $packet;
     }
 
     /** SIP OPTIONS request (RFC 3261) */
