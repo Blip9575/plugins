@@ -172,17 +172,26 @@ function awg_set_keys($server)
 {
     $keys = [];
     foreach (
-        ['jc', 'jmin', 'jmax', 's1', 's2', 's3', 's4', 'h1', 'h2', 'h3', 'h4', 'i1', 'i2', 'i3', 'i4', 'i5',
-         'headerprotectionkey', 'contentpaddingaddition', 'rekeyaftertime', 'rekeytimeout', 'rejectaftertime',
-         'keepalivetimeout', 'maxhandshakeattempts'] as $key
+        ['jc', 'jmin', 'jmax', 's1', 's2', 's3', 's4', 'h1', 'h2', 'h3', 'h4', 'i1', 'i2', 'i3', 'i4', 'i5'] as $key
     ) {
         if ((string)$server->$key !== '') {
             $keys[] = $key;
         }
     }
-    foreach (['randomtrailers', 'disablecookies'] as $key) {
-        if ((string)$server->$key === '1') {
-            $keys[] = $key;
+    /* the AmneziaWG 3.x options only count when they are enabled for the instance */
+    if ((string)$server->awg3_enabled === '1') {
+        foreach (
+            ['headerprotectionkey', 'contentpaddingaddition', 'rekeyaftertime', 'rekeytimeout', 'rejectaftertime',
+             'keepalivetimeout', 'maxhandshakeattempts'] as $key
+        ) {
+            if ((string)$server->$key !== '') {
+                $keys[] = $key;
+            }
+        }
+        foreach (['randomtrailers', 'disablecookies'] as $key) {
+            if ((string)$server->$key === '1') {
+                $keys[] = $key;
+            }
         }
     }
     return implode(',', $keys);
@@ -208,7 +217,10 @@ function wg_reconfigure_hash($server)
             implode(',', [
                 $server->s1, $server->s2, $server->s3, $server->s4,
                 $server->h1, $server->h2, $server->h3, $server->h4,
-                $server->headerprotectionkey, $server->randomtrailers, $server->disablecookies
+                (string)$server->awg3_enabled === '1' ? $server->headerprotectionkey : '',
+                (string)$server->awg3_enabled === '1' ? $server->randomtrailers : '',
+                (string)$server->awg3_enabled === '1' ? $server->disablecookies : '',
+                (string)$server->awg3_enabled
             ])
         )
     );

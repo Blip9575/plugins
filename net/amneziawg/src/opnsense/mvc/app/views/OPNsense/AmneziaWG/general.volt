@@ -90,13 +90,10 @@
                     /* the list holds the stored key of the profile, show its label and nothing for none */
                     awg2profile: function (column, row) {
                         const labels = {
-                            random: 'Random', dns: 'DNS (53)', ntp: 'NTP (123)', quic: 'QUIC (443)', sip: 'SIP (5060)',
-                            stun: 'STUN (3478)'
+                            random: 'Random', http3: 'HTTP/3 (443)', quic: 'QUIC (443)', dns: 'DNS (53)',
+                            ntp: 'NTP (123)', stun: 'STUN (3478)', sip: 'SIP (5060)'
                         };
                         return labels[row[column.id]] || '';
-                    },
-                    awg3profile: function (column, row) {
-                        return row[column.id] === 'random' ? 'Random' : '';
                     }
                 }
             }
@@ -117,27 +114,15 @@
          */
         $("#control_label_server\\.pubkey").append($("#keygen_div").detach().show());
         /**
-         * Parameter generators on the labels of the AmneziaWG 2.0 and 3.x rows, like the keypair button. The gear of
-         * AmneziaWG 2.0 replaces Jc, Jmin, Jmax, S1-S4 and H1-H4 with a new random profile for the protocol selected in
-         * the row (Random imitates no protocol and clears I1-I5, a protocol also sets I1). The gear of AmneziaWG 3.x
-         * generates a new header protection key and sets S1-S4 when they are empty or below the 12 it requires. None
-         * generates nothing. Nothing is saved before the dialog is saved, but peers of this instance stop working with
-         * changed values, so the dialog asks first when peers are selected and values would be replaced.
+         * Parameter generators, like the keypair button. The gear on the AmneziaWG 2.0 row replaces Jc, Jmin, Jmax,
+         * S1-S4 and H1-H4 with a new random profile for the protocol selected in the row (Random imitates no protocol
+         * and clears I1-I5, a protocol also sets I1). Ticking "Enable AmneziaWG 3.x" asks whether to generate a new
+         * header protection key and S1-S4 (only when they are below the 12 it requires), nothing is generated unless
+         * the answer is yes. Nothing is saved before the dialog is saved, but peers of this instance stop working with
+         * changed values, so the dialog always asks first and says so when peers are selected.
          */
         $("#control_label_server\\.awg2_profile").append($("#awg2gen_div").detach().show());
-        $("#control_label_server\\.awg3_profile").append($("#awg3gen_div").detach().show());
-        const awg_sync = function () {
-            $("#awg2gen").prop('disabled', $("#server\\.awg2_profile").val() === 'none');
-            $("#awg3gen").prop('disabled', $("#server\\.awg3_profile").val() === 'none');
-        };
-        $("#server\\.awg2_profile, #server\\.awg3_profile").on('change', awg_sync);
-        $("#{{ formGridAmneziaWGServer['edit_dialog_id'] }}").on('shown.bs.modal', awg_sync);
-        const awg_filled = function (fields) {
-            return fields.some(function (field) {
-                return String($("#server\\." + field).val() || '') !== '';
-            });
-        };
-        const awg_generate = function (url, replaces) {
+        const awg_generate = function (url, message) {
             const apply = function () {
                 ajaxGet(url, {}, function (data, status) {
                     if (data.status && data.status === 'ok') {
@@ -149,38 +134,43 @@
                 });
             };
             const peers = $("#server\\.peers").val();
-            if (replaces && peers && peers.length > 0) {
-                stdDialogConfirm(
-                    "{{ lang._('Replace parameters') }}",
-                    "{{ lang._('This instance has peers. They stop connecting until they use a new configuration with the new values. Replace the parameters?') }}",
-                    "{{ lang._('Yes') }}", "{{ lang._('Cancel') }}", apply
-                );
-            } else {
-                apply();
+            if (peers && peers.length > 0) {
+                message += " {{ lang._('This instance has peers. They stop connecting until they use a new configuration with the new values.') }}";
             }
+            stdDialogConfirm(
+                "{{ lang._('Generate new parameters') }}", message,
+                "{{ lang._('Yes') }}", "{{ lang._('Cancel') }}", apply
+            );
         };
         $("#awg2gen").click(function () {
             const profile = $("#server\\.awg2_profile").val();
-            if (profile && profile !== 'none') {
-                awg_generate(
-                    "/api/amneziawg/server/gen_params/" + profile,
-                    awg_filled(['jc', 'jmin', 'jmax', 's1', 's2', 's3', 's4', 'h1', 'h2', 'h3', 'h4', 'i1', 'i2', 'i3', 'i4', 'i5'])
+            if (!profile || profile === 'none') {
+                stdDialogInform(
+                    "{{ lang._('No UDP protocol selected') }}",
+                    "{{ lang._('Select Random or a UDP protocol to mimic first.') }}",
+                    "{{ lang._('Close') }}", undefined, "warning"
                 );
+                return;
             }
+            awg_generate(
+                "/api/amneziawg/server/gen_params/" + profile,
+                "{{ lang._('Generate new parameters? The AmneziaWG 2.0 parameters (Jc, Jmin, Jmax, S1-S4, H1-H4 and I1-I5) are replaced.') }}"
+            );
         });
-        $("#awg3gen").click(function () {
-            const profile = $("#server\\.awg3_profile").val();
-            if (profile && profile !== 'none') {
-                const prefixes = ['s1', 's2', 's3', 's4'];
-                const need_prefixes = prefixes.some(function (field) {
-                    const value = parseInt($("#server\\." + field).val(), 10);
-                    return isNaN(value) || value < 12;
-                });
-                awg_generate(
-                    "/api/amneziawg/server/gen_params3/" + profile + "/" + (need_prefixes ? '1' : '0'),
-                    awg_filled(['headerprotectionkey']) || (need_prefixes && awg_filled(prefixes))
-                );
+        /* click, not change: loading the form sets the box without a click */
+        $("#server\\.awg3_enabled").on('click', function () {
+            if (!$(this).is(':checked')) {
+                return;
             }
+            const prefixes = ['s1', 's2', 's3', 's4'];
+            const need_prefixes = prefixes.some(function (field) {
+                const value = parseInt($("#server\\." + field).val(), 10);
+                return isNaN(value) || value < 12;
+            });
+            awg_generate(
+                "/api/amneziawg/server/gen_params3/" + (need_prefixes ? '1' : '0'),
+                "{{ lang._('Generate new parameters now? A new header protection key is generated, and S1-S4 when they are below 12. Existing values are replaced.') }}"
+            );
         });
         $("#keygen").click(function(){
             ajaxGet("/api/amneziawg/server/key_pair", {}, function(data, status){
@@ -516,12 +506,7 @@
             </button>
         </span>
         <span id="awg2gen_div" style="display:none" class="pull-right">
-            <button id="awg2gen" type="button" class="btn btn-secondary" title="{{ lang._('Generate a new AmneziaWG 2.0 profile for the selected protocol. This replaces Jc, Jmin, Jmax, S1-S4 and H1-H4 and sets I1-I5. Select Random or a protocol first.') }}" data-toggle="tooltip">
-              <i class="fa fa-fw fa-gear"></i>
-            </button>
-        </span>
-        <span id="awg3gen_div" style="display:none" class="pull-right">
-            <button id="awg3gen" type="button" class="btn btn-secondary" title="{{ lang._('Generate a new header protection key for AmneziaWG 3.x and set S1-S4 when they are below 12. Select Random first.') }}" data-toggle="tooltip">
+            <button id="awg2gen" type="button" class="btn btn-secondary" title="{{ lang._('Generate new parameters') }}" data-toggle="tooltip">
               <i class="fa fa-fw fa-gear"></i>
             </button>
         </span>

@@ -79,11 +79,12 @@
                     <OptionValues>
                         <none value="none">Select UDP protocol to mimic</none>
                         <random value="random">Random</random>
+                        <http3 value="http3">HTTP/3 (443)</http3>
+                        <quic value="quic">QUIC (443)</quic>
                         <dns value="dns">DNS (53)</dns>
                         <ntp value="ntp">NTP (123)</ntp>
-                        <quic value="quic">QUIC (443)</quic>
-                        <sip value="sip">SIP (5060)</sip>
                         <stun value="stun">STUN (3478)</stun>
+                        <sip value="sip">SIP (5060)</sip>
                     </OptionValues>
                 </awg2_profile>
                 <jc type="IntegerField">
@@ -151,15 +152,11 @@
                     <ValidationMessage>Use CPS tags written in angle brackets: b 0x.. (an even number of hex digits), r N, rc N, rd N, t or c.</ValidationMessage>
                 </i5>
                 <!-- AmneziaWG 3.x [Interface], all optional -->
-                <!-- profile chosen for the generator button of the dialog, only remembered, awg does not use it -->
-                <awg3_profile type="OptionField">
+                <!-- switch for the AmneziaWG 3.x options below: when off they are stored but not used -->
+                <awg3_enabled type="BooleanField">
+                    <Default>0</Default>
                     <Required>Y</Required>
-                    <Default>none</Default>
-                    <OptionValues>
-                        <none value="none">None</none>
-                        <random value="random">Random</random>
-                    </OptionValues>
-                </awg3_profile>
+                </awg3_enabled>
                 <headerprotectionkey type="Base64Field"/>
                 <contentpaddingaddition type="TextField">
                     <Mask>/^[0-9]{1,5}(-[0-9]{1,5})?$/</Mask>

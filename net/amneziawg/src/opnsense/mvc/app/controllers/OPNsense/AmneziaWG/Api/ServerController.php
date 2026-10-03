@@ -45,7 +45,7 @@ class ServerController extends ApiMutableModelControllerBase
 
     /**
      * new random AmneziaWG 2.0 obfuscation parameters for the profile chosen in the instance dialog: none generates
-     * nothing, random generates the parameters without a signature packet, a protocol (dns, ntp, quic, sip, stun)
+     * nothing, random generates the parameters without a signature packet, a protocol (http3, quic, dns, ntp, stun, sip)
      * also sets I1 to a packet that imitates the start of a session of that protocol
      */
     public function genParamsAction($profile = 'random')
@@ -61,19 +61,12 @@ class ServerController extends ApiMutableModelControllerBase
     }
 
     /**
-     * new AmneziaWG 3.x parameters for the profile chosen in the instance dialog: none generates nothing, random
-     * generates a header protection key. With prefixes set to 1 the S1-S4 prefix sizes are included too, the dialog
-     * asks for them when S1-S4 are empty or below the 12 that header protection requires
+     * new AmneziaWG 3.x parameters for the "Enable AmneziaWG 3.x" box of the instance dialog: a header protection key.
+     * With prefixes set to 1 the S1-S4 prefix sizes are included too, the dialog asks for them when S1-S4 are empty or
+     * below the 12 that header protection requires
      */
-    public function genParams3Action($profile = 'random', $prefixes = '0')
+    public function genParams3Action($prefixes = '0')
     {
-        $profile = strtolower((string)$profile);
-        if ($profile === 'none') {
-            return ['status' => 'ok', 'params' => []];
-        } elseif ($profile !== 'random') {
-            return ['status' => 'failed'];
-        }
-
         return ['status' => 'ok', 'params' => ParamGenerator::awg3((string)$prefixes === '1')];
     }
 

@@ -85,40 +85,43 @@ class Server extends BaseModel
                 }
             }
 
-            /* AmneziaWG 3.x: header protection derives its nonce from the first 12 bytes of the S1-S4 prefixes */
-            $hpk = (string)$node->headerprotectionkey;
-            if ($hpk !== '') {
-                if (strlen(base64_decode($hpk, true) ?: '') !== 32) {
-                    $messages->appendMessage(new Message(
-                        gettext('The header protection key must be a 32 byte base64 key.'),
-                        $key . '.headerprotectionkey'
-                    ));
-                }
-                foreach (['s1', 's2', 's3', 's4'] as $field) {
-                    if ((int)(string)$node->$field < 12) {
+            /* the AmneziaWG 3.x options are stored but not used while the instance has them disabled */
+            if ((string)$node->awg3_enabled === '1') {
+                /* AmneziaWG 3.x: header protection derives its nonce from the first 12 bytes of the S1-S4 prefixes */
+                $hpk = (string)$node->headerprotectionkey;
+                if ($hpk !== '') {
+                    if (strlen(base64_decode($hpk, true) ?: '') !== 32) {
                         $messages->appendMessage(new Message(
-                            gettext('S1-S4 must be at least 12 when header protection is used.'),
+                            gettext('The header protection key must be a 32 byte base64 key.'),
+                            $key . '.headerprotectionkey'
+                        ));
+                    }
+                    foreach (['s1', 's2', 's3', 's4'] as $field) {
+                        if ((int)(string)$node->$field < 12) {
+                            $messages->appendMessage(new Message(
+                                gettext('S1-S4 must be at least 12 when header protection is used.'),
+                                $key . '.' . $field
+                            ));
+                        }
+                    }
+                }
+
+                /* AmneziaWG 3.x ranges are 16 bit */
+                foreach (
+                    ['contentpaddingaddition', 'rekeyaftertime', 'rekeytimeout', 'rejectaftertime', 'keepalivetimeout',
+                     'maxhandshakeattempts'] as $field
+                ) {
+                    $value = (string)$node->$field;
+                    if ($value === '') {
+                        continue;
+                    }
+                    $parts = explode('-', $value);
+                    if ((int)$parts[0] > (int)end($parts) || (int)end($parts) > 65535) {
+                        $messages->appendMessage(new Message(
+                            gettext('Invalid range, start must not exceed end and both must be at most 65535.'),
                             $key . '.' . $field
                         ));
                     }
-                }
-            }
-
-            /* AmneziaWG 3.x ranges are 16 bit */
-            foreach (
-                ['contentpaddingaddition', 'rekeyaftertime', 'rekeytimeout', 'rejectaftertime', 'keepalivetimeout',
-                 'maxhandshakeattempts'] as $field
-            ) {
-                $value = (string)$node->$field;
-                if ($value === '') {
-                    continue;
-                }
-                $parts = explode('-', $value);
-                if ((int)$parts[0] > (int)end($parts) || (int)end($parts) > 65535) {
-                    $messages->appendMessage(new Message(
-                        gettext('Invalid range, start must not exceed end and both must be at most 65535.'),
-                        $key . '.' . $field
-                    ));
                 }
             }
 
