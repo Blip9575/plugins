@@ -109,9 +109,28 @@ class ServerController extends ApiMutableModelControllerBase
         return $this->getBase('server', 'servers.server', $uuid);
     }
 
+    /**
+     * The server name of the HTTP/3 and QUIC signature packets needs a source that gives a name (there is no fallback), so saving
+     * an instance with one of these protocols resolves the source of that instance. This is not part of the model validation:
+     * instances saved before the source existed count as changed there, so every save would validate all of them.
+     * @return array|null the validation answer of the dialog, null when the source is fine or not used
+     */
+    protected function sniValidation()
+    {
+        $post = $this->request->getPost('server');
+        if (is_array($post) && in_array($post['awg2_profile'] ?? '', ['http3', 'quic'], true)) {
+            try {
+                SniSource::resolve((string)($post['sni_source'] ?? ''));
+            } catch (\RuntimeException $e) {
+                return ['result' => 'failed', 'validations' => ['server.sni_source' => $e->getMessage()]];
+            }
+        }
+        return null;
+    }
+
     public function addServerAction($uuid = null)
     {
-        return $this->addBase('server', 'servers.server', $uuid);
+        return $this->sniValidation() ?? $this->addBase('server', 'servers.server', $uuid);
     }
 
     public function delServerAction($uuid)
@@ -121,7 +140,7 @@ class ServerController extends ApiMutableModelControllerBase
 
     public function setServerAction($uuid = null)
     {
-        return $this->setBase('server', 'servers.server', $uuid);
+        return $this->sniValidation() ?? $this->setBase('server', 'servers.server', $uuid);
     }
 
     public function toggleServerAction($uuid)
