@@ -154,8 +154,8 @@ class SniSource
         $name = self::reverse($address);
         if ($name === null) {
             throw new \RuntimeException($label !== null
-                ? sprintf(gettext('The reverse lookup of %s assigned to %s gives no name. Enter a public address or a host name in the text box.'), $address, $label)
-                : sprintf(gettext('The reverse lookup of %s gives no name. Enter a public address or a host name in the text box.'), $address));
+                ? sprintf(gettext('The reverse lookup of %s assigned to %s has failed. Enter a public address or a host name in the text box.'), $address, $label)
+                : sprintf(gettext('The reverse lookup of %s has failed. Enter a public address or a host name in the text box.'), $address));
         }
         return [$name, $label !== null ? sprintf(gettext('reverse lookup of %s assigned to %s'), $address, $label) : sprintf(gettext('reverse lookup of %s'), $address)];
     }
