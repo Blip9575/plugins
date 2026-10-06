@@ -38,11 +38,21 @@ class PeerDefaults
 {
     public const ALLOWED_IPS = '0.0.0.0/0,::/0';
 
-    /** the address of the WAN (the PPPoE device on a PPPoE WAN), IPv6 in brackets, empty when it has none */
-    public static function address()
+    /** the address of an interface (the PPPoE device on a PPPoE WAN), IPv6 in brackets, empty when it has none */
+    public static function address($interface = 'wan')
     {
-        $address = (string)SniSource::interfaceAddress('wan');
+        $address = (string)SniSource::interfaceAddress($interface);
         return strpos($address, ':') !== false ? '[' . $address . ']' : $address;
+    }
+
+    /** the addresses of the interfaces the SNI source offers, for an endpoint that follows the SNI source */
+    public static function addresses()
+    {
+        $result = [];
+        foreach (array_keys(SniSource::interfaces()) as $interface) {
+            $result[$interface] = self::address($interface);
+        }
+        return $result;
     }
 
     /** WAN address and listen port, the address alone when the port is not fixed */

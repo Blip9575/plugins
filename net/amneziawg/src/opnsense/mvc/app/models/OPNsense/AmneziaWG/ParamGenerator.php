@@ -583,12 +583,39 @@ class ParamGenerator
         $extensions = [];
         $grease = false;
         $named = false;
+        /* GREASE values are random per connection: each value of the template gets a new one, equal values stay
+         * equal (a key share and its group) and different ones stay different (Chromium's two GREASE extensions) */
+        $greaseMap = [];
+        $regrease = function ($value) use (&$greaseMap) {
+            if (!self::isGrease($value)) {
+                return $value;
+            }
+            while (!isset($greaseMap[$value])) {
+                $nibble = random_int(0, 15);
+                $new = ($nibble << 12) | 0x0a00 | ($nibble << 4) | 0x0a;
+                if (!in_array($new, $greaseMap, true)) {
+                    $greaseMap[$value] = $new;
+                }
+            }
+            return $greaseMap[$value];
+        };
+        /* a list of 16 bit values behind a length of $prefix bytes, GREASE values replaced */
+        $relist = function ($data, $prefix) use ($regrease) {
+            $values = array_values(unpack('n*', substr($data, $prefix)) ?: []);
+            return substr($data, 0, $prefix) . pack('n*', ...array_map($regrease, $values));
+        };
+        $suites = $relist($suites, 2);
         while ($pos + 4 <= $extensionsEnd) {
             [$type, $size] = array_values(unpack('n2', substr($hello, $pos, 4)));
             $data = substr($hello, $pos + 4, $size);
             $pos += 4 + $size;
             if (self::isGrease($type)) {
                 $grease = true;
+                $type = $regrease($type);
+            } elseif ($type === 10 || $type === 13) {
+                $data = $relist($data, 2);
+            } elseif ($type === 43) {
+                $data = $relist($data, 1);
             } elseif ($type === 41 || $type === 42) {
                 throw new \RuntimeException(
                     gettext('The template resumes an earlier session, capture the first connection to a new server.')
@@ -600,7 +627,7 @@ class ParamGenerator
                 $shares = '';
                 for ($i = 2; $i + 4 <= strlen($data);) {
                     [$group, $length] = array_values(unpack('n2', substr($data, $i, 4)));
-                    $shares .= pack('nn', $group, $length) .
+                    $shares .= pack('nn', $regrease($group), $length) .
                         (self::isGrease($group) ? substr($data, $i + 4, $length) : self::randomBytes($length));
                     $i += 4 + $length;
                 }
@@ -610,10 +637,20 @@ class ParamGenerator
                 for ($i = 0; $i < strlen($data);) {
                     $start = $i;
                     $id = self::readVarint($data, $i);
+                    $idLength = $i - $start;
                     $length = self::readVarint($data, $i);
-                    $params .= $id === 0x0f ?
-                        self::varint($id) . self::varint($scidLength) . $newScid :
-                        substr($data, $start, $i - $start + $length);
+                    if ($id === 0x0f) {
+                        $params .= self::varint($id) . self::varint($scidLength) . $newScid;
+                    } elseif ($id >= 27 && ($id - 27) % 31 === 0 && $idLength <= 4) {
+                        /* GREASE transport parameter (RFC 9000 section 18.1): a new 31 * N + 27 of the same size */
+                        $max = [1 => 63, 2 => 16383, 4 => 1073741823][$idLength];
+                        do {
+                            $id = 31 * random_int(0, intdiv($max - 27, 31)) + 27;
+                        } while (strlen(self::varint($id)) !== $idLength);
+                        $params .= self::varint($id) . self::varint($length) . self::randomBytes($length);
+                    } else {
+                        $params .= substr($data, $start, $i - $start + $length);
+                    }
                     $i += $length;
                 }
                 $data = $params;
@@ -666,27 +703,58 @@ class ParamGenerator
             $sizes[$ref] = max(0, $packets[$pi]['frames'][$fi][2] + $delta);
             $delta -= $sizes[$ref] - $packets[$pi]['frames'][$fi][2];
         }
+        /* Chrome scatters the ClientHello (several CRYPTO frames, PING and PADDING in a random order, new on every
+         * connection): a template that shows this gets a new layout of the same kind every time */
+        $chaos = false;
+        foreach ($packets as $packet) {
+            $kinds = array_count_values(array_column($packet['frames'], 0));
+            $chaos = $chaos || ($kinds['crypto'] ?? 0) > 1 || ($kinds['ping'] ?? 0) > 0;
+        }
         $result = [];
         foreach ($packets as $pi => $packet) {
-            $payload = [];
-            $pads = [];
+            $items = [];
             foreach ($packet['frames'] as $fi => $frame) {
-                if ($frame[0] === 'pad') {
-                    $pads[] = count($payload);
-                    $payload[] = $frame[1];
-                } elseif ($frame[0] === 'ping') {
-                    $payload[] = "\x01";
+                if ($frame[0] !== 'crypto') {
+                    $items[] = $frame;
                 } elseif ($sizes["$pi:$fi"] > 0) {
-                    $payload[] = "\x06" . self::varint($frame[1]) . self::varint($sizes["$pi:$fi"]) .
-                        substr($newHello, $frame[1], $sizes["$pi:$fi"]);
+                    $items[] = ['crypto', $frame[1], $sizes["$pi:$fi"]];
                 }
             }
-            /* the packet keeps its size: the padding takes up the difference, the longest run first */
+            if ($chaos) {
+                $items = self::scatter($items);
+            }
+            $payload = [];
+            $pads = [];
+            foreach ($items as $item) {
+                if ($item[0] === 'pad') {
+                    $pads[] = count($payload);
+                    $payload[] = $item[1];
+                } elseif ($item[0] === 'ping') {
+                    $payload[] = "\x01";
+                } else {
+                    $payload[] = "\x06" . self::varint($item[1]) . self::varint($item[2]) .
+                        substr($newHello, $item[1], $item[2]);
+                }
+            }
+            /* the packet keeps its size: the padding takes up the difference, the longest run first (with a new
+             * layout the runs get random sizes) */
             $used = array_sum(array_map(fn($part) => is_int($part) ? $part : strlen($part), $payload));
             $missing = $packet['size'] - $used;
             if (!$pads) {
                 $pads[] = count($payload);
                 $payload[] = 0;
+            }
+            if ($chaos && $missing >= -array_sum(array_map(fn($idx) => $payload[$idx], $pads))) {
+                $total = array_sum(array_map(fn($idx) => $payload[$idx], $pads)) + $missing;
+                $cuts = [0, $total];
+                for ($i = 1; $i < count($pads); $i++) {
+                    $cuts[] = random_int(0, $total);
+                }
+                sort($cuts);
+                foreach ($pads as $n => $idx) {
+                    $payload[$idx] = $cuts[$n + 1] - $cuts[$n];
+                }
+                $missing = 0;
             }
             usort($pads, fn($a, $b) => $payload[$b] <=> $payload[$a]);
             foreach ($pads as $idx) {
@@ -717,6 +785,50 @@ class ParamGenerator
                 $out[$pnOffset + $i] = chr(ord($out[$pnOffset + $i]) ^ ord($mask[1 + $i]));
             }
             $result[] = $out . $packet['trailer'];
+        }
+        return $result;
+    }
+
+    /**
+     * A new Chrome-style layout for the frames of one packet: the same part of the ClientHello cut at new places
+     * into as many CRYPTO frames as before, with the same number of PING frames and PADDING runs (their sizes are
+     * set later), all in a random order.
+     */
+    private static function scatter(array $items)
+    {
+        $kinds = array_count_values(array_column($items, 0));
+        $pieces = [];
+        foreach ($items as $item) {
+            if ($item[0] === 'crypto') {
+                $last = count($pieces) - 1;
+                if ($last >= 0 && $pieces[$last][0] + $pieces[$last][1] === $item[1]) {
+                    $pieces[$last][1] += $item[2];   /* contiguous parts join before they are cut again */
+                } else {
+                    $pieces[] = [$item[1], $item[2]];
+                }
+            }
+        }
+        usort($pieces, fn($a, $b) => $a[0] <=> $b[0]);
+        while (count($pieces) < ($kinds['crypto'] ?? 0)) {
+            $long = array_keys(array_filter($pieces, fn($piece) => $piece[1] > 1));
+            if (!$long) {
+                break;
+            }
+            $idx = $long[random_int(0, count($long) - 1)];
+            $cut = random_int(1, $pieces[$idx][1] - 1);
+            array_splice($pieces, $idx + 1, 0, [[$pieces[$idx][0] + $cut, $pieces[$idx][1] - $cut]]);
+            $pieces[$idx][1] = $cut;
+        }
+        $result = array_map(fn($piece) => ['crypto', $piece[0], $piece[1]], $pieces);
+        for ($i = 0; $i < ($kinds['ping'] ?? 0); $i++) {
+            $result[] = ['ping'];
+        }
+        for ($i = 0; $i < ($kinds['pad'] ?? 0); $i++) {
+            $result[] = ['pad', 0];
+        }
+        for ($i = count($result) - 1; $i > 0; $i--) {
+            $j = random_int(0, $i);
+            [$result[$i], $result[$j]] = [$result[$j], $result[$i]];
         }
         return $result;
     }

@@ -452,7 +452,7 @@
         <id>server.endpoint</id>
         <label>Endpoint</label>
         <type>text</type>
-        <help>The endpoint that the instance will be reachable at, only used by the Peer generator. When empty, this dialog fills in the WAN address and the listen port.</help>
+        <help>The endpoint that the instance will be reachable at, only used by the Peer generator. When empty, this dialog fills in the WAN address and the listen port; with HTTP/3 the SNI source instead (a typed host name or address, for an interface the name in the packets), so the client looks up the same name as in the packets. A host name must resolve to this firewall. The built-in list is never used here.</help>
         <grid_view>
             <ignore>true</ignore>
         </grid_view>

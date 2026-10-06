@@ -225,17 +225,41 @@
                 }
             });
         };
-        /* defaults of the peer generator fields: filled into empty fields when the dialog has its data, the endpoint
-         * (WAN address and listen port) follows the port as long as it still holds the value it was given */
+        /* defaults of the peer generator fields: filled into empty fields when the dialog has its data. The endpoint is
+         * host and listen port and follows them as long as it still holds the value it was given.
+         * Host: the WAN address, for HTTP/3 the SNI source, so the client looks up the same name a browser would
+         * (see awg_endpoint_host) */
         let awg_wan = '';
+        let awg_addresses = {};
+        let awg_builtin = [];
+        const awg_endpoint_host = function () {
+            const source = String($("#server\\.sni_source").val() || '').trim();
+            if ($("#server\\.awg2_profile").val() !== 'http3' || source === '' || source === 'list') {
+                return awg_wan;   /* the built-in names are not this firewall */
+            } else if (/^[0-9.]+$/.test(source)) {
+                return source;
+            } else if (source.indexOf(':') !== -1) {
+                return '[' + source + ']';
+            } else if (source.indexOf('.') !== -1) {
+                return source.toLowerCase();   /* a host name, used as typed like the SNI */
+            }
+            /* an interface: the name the gear put in the packets (its reverse lookup), before that its address */
+            const used = String($("#server\\.sni_used").val() || '');
+            if (used !== '' && !awg_builtin.includes(used)) {
+                return used;
+            }
+            return awg_addresses[source] || awg_wan;
+        };
         const awg_endpoint_sync = function () {
             const $endpoint = $("#server\\.endpoint");
             if ($endpoint.val() === '' || $endpoint.val() === $endpoint.data('awg-default')) {
+                const host = awg_endpoint_host();
                 const port = String($("#server\\.port").val() || '').trim();
-                const value = awg_wan !== '' && port !== '' ? awg_wan + ':' + port : awg_wan;
+                const value = host !== '' && port !== '' ? host + ':' + port : host;
                 $endpoint.val(value).data('awg-default', value);
             }
         };
+        $("#server\\.sni_source, #server\\.awg2_profile").on('change', awg_endpoint_sync);
         $("#{{ formGridAmneziaWGServer['edit_dialog_id'] }}").on('opnsense_bootgrid_mapped', function () {
             $("#server\\.endpoint").removeData('awg-default');
             ajaxGet('/api/amneziawg/server/peer_defaults', {}, function (data, status) {
@@ -243,6 +267,8 @@
                     return;
                 }
                 awg_wan = htmlDecode(data.address || '');
+                awg_addresses = data.addresses || {};
+                awg_builtin = data.builtin || [];
                 awg_endpoint_sync();
                 $.each({peer_dns: data.peer_dns, allowed_ips: data.allowed_ips}, function (field, value) {
                     const $field = $("#server\\." + field);
@@ -275,12 +301,13 @@
                                 $field.val(htmlDecode(value));
                             }
                         });
-                        if (data.params.port) {
-                            awg_endpoint_sync();
-                            awg_port_check(data.params.port);
-                        }
                         if (url.indexOf('/gen_params/') !== -1) {
                             $("#server\\.sni_used").val(htmlDecode(data.sni || ''));
+                        }
+                        /* after the server name: the endpoint may follow it */
+                        awg_endpoint_sync();
+                        if (data.params.port) {
+                            awg_port_check(data.params.port);
                         }
                         awg_header_update();
                     } else if (data.message) {

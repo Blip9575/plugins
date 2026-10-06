@@ -167,13 +167,16 @@ class ServerController extends ApiMutableModelControllerBase
 
     /**
      * defaults of the peer generator fields for the instance dialog: the WAN address (the endpoint is that address and
-     * the listen port), the DNS server and the allowed IPs
+     * the listen port), the DNS server and the allowed IPs. For HTTP/3 the endpoint follows the SNI source, so the
+     * addresses of the interfaces and the built-in server names (never an endpoint) come along.
      */
     public function peerDefaultsAction()
     {
         return [
             'status' => 'ok',
             'address' => PeerDefaults::address(),
+            'addresses' => PeerDefaults::addresses(),
+            'builtin' => ParamGenerator::SNI,
             'peer_dns' => PeerDefaults::dns(),
             'allowed_ips' => PeerDefaults::ALLOWED_IPS,
         ];
