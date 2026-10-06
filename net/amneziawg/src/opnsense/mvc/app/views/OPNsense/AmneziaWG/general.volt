@@ -171,7 +171,8 @@
         $("#{{ formGridAmneziaWGServer['edit_dialog_id'] }}").on('shown.bs.modal', awg_header_update);
         /* the server name rows only matter for the HTTP/3 and QUIC packets */
         const awg_sni_rows = function () {
-            $("#row_server\\.sni_source, #row_server\\.sni_used").toggle(['http3', 'quic'].includes($("#server\\.awg2_profile").val()));
+            const quic = ['http3', 'quic'].includes($("#server\\.awg2_profile").val());
+            $("#row_server\\.sni_source, #row_server\\.sni_used, #row_server\\.quic_template").toggle(quic);
         };
         $("#server\\.awg2_profile").on('change', awg_sni_rows);
         $("#{{ formGridAmneziaWGServer['edit_dialog_id'] }}").on('shown.bs.modal', function () {
@@ -239,7 +240,10 @@
         });
         const awg_generate = function (url, message, on_cancel) {
             const apply = function () {
-                ajaxGet(url, {}, function (data, status) {
+                /* gen_params is a POST: the Initial packet template is too long for a URL */
+                const post = url.indexOf("/gen_params/") !== -1;
+                const send = post ? {template: $("#server\\.quic_template").val() || ''} : {};
+                (post ? ajaxCall : ajaxGet)(url, send, function (data, status) {
                     if (data.status && data.status === 'ok') {
                         $.each(data.params, function (field, value) {
                             const $field = $("#server\\." + field);
@@ -258,10 +262,14 @@
                         }
                         awg_header_update();
                     } else if (data.message) {
-                        awg_sni_manual();
+                        /* the field the message is about: the SNI source (default) or the Initial packet template */
+                        const field = data.field === 'quic_template' ? 'quic_template' : 'sni_source';
+                        if (field === 'sni_source') {
+                            awg_sni_manual();
+                        }
                         stdDialogInform(
                             "{{ lang._('Nothing was changed') }}", $("<div></div>").text(htmlDecode(data.message)),
-                            "{{ lang._('Close') }}", function () { $("#server\\.sni_source").focus(); }, "warning"
+                            "{{ lang._('Close') }}", function () { $("#server\\." + field).focus(); }, "warning"
                         );
                     }
                 });

@@ -98,6 +98,11 @@
                     <Mask>/^[A-Za-z0-9]([A-Za-z0-9._-]{0,251}[A-Za-z0-9])?$/</Mask>
                     <ValidationMessage>Not a valid host name.</ValidationMessage>
                 </sni_used>
+                <!-- captured client Initial datagrams (hex, one per line) the gear builds the HTTP/3 and QUIC signature packets from, awg does not use it -->
+                <quic_template type="TextField">
+                    <Mask>/^[0-9a-fA-Fx\s,;]*$/</Mask>
+                    <ValidationMessage>Enter the datagrams as hex, one per line.</ValidationMessage>
+                </quic_template>
                 <jc type="IntegerField">
                     <MinimumValue>0</MinimumValue>
                     <MaximumValue>128</MaximumValue>

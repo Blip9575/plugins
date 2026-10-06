@@ -78,7 +78,7 @@ class ParamGenerator
     /**
      * @param string $sni server name for the HTTP/3 and QUIC signature packets, a random one of SNI when not given
      */
-    public static function awg2(string $protocol = '', ?string $sni = null)
+    public static function awg2(string $protocol = '', ?string $sni = null, string $template = '')
     {
         if (in_array($protocol, self::INITIAL, true)) {
             /* a QUIC client sends nothing between its Initial packets and the server's answer: no junk packets, and
@@ -112,8 +112,12 @@ class ParamGenerator
             $result[$field] = '';
         }
         if (isset(self::PROTOCOLS[$protocol])) {
-            /* one signature packet per datagram: I1, and I2 when the protocol opens with two packets */
-            foreach (array_values((array)self::$protocol($sni)) as $idx => $packet) {
+            /* one signature packet per datagram: I1, and I2 when the protocol opens with two packets; HTTP/3 and QUIC
+             * use the captured Initial packets of a real client instead of the built-in ClientHello when given */
+            $packets = in_array($protocol, self::INITIAL, true) && trim($template) !== '' ?
+                array_map(fn($packet) => self::bytes($packet), self::templateInitials($template, $sni)) :
+                (array)self::$protocol($sni);
+            foreach (array_values($packets) as $idx => $packet) {
                 $result['i' . ($idx + 1)] = $packet;
             }
         }
@@ -168,9 +172,9 @@ class ParamGenerator
      * with it.
      * None of these values comes from the documentation, they are this plugin's choice.
      */
-    public static function profile(string $protocol, ?string $sni = null, bool $awg3 = false)
+    public static function profile(string $protocol, ?string $sni = null, bool $awg3 = false, string $template = '')
     {
-        $result = self::awg2($protocol, $sni);
+        $result = self::awg2($protocol, $sni, $template);
         if (isset(self::PROTOCOLS[$protocol])) {
             $result['port'] = self::PROTOCOLS[$protocol]['port'];
         }
@@ -345,11 +349,7 @@ class ParamGenerator
         $scid = $scidLength > 0 ? random_bytes($scidLength) : '';
         $hello = self::clientHello($sni ?? self::SNI[random_int(0, count(self::SNI) - 1)], $scid, $hybrid);
 
-        $secret = hash_hmac('sha256', $dcid, hex2bin('38762cf7f55934b34d179ae6a4c80cadccbb7f0a'), true);
-        $secret = self::expandLabel($secret, 'client in', 32);
-        $key = self::expandLabel($secret, 'quic key', 16);
-        $iv = self::expandLabel($secret, 'quic iv', 12);
-        $hp = self::expandLabel($secret, 'quic hp', 16);
+        [$key, $iv, $hp] = self::initialKeys($dcid);
 
         $pnLength = 2;
         $head = "\x00\x00\x00\x01" . chr(8) . $dcid . chr($scidLength) . $scid . "\x00";
@@ -375,12 +375,7 @@ class ParamGenerator
             $packet = $header . $encrypted . $tag;
 
             /* header protection, the sample starts 4 bytes after the start of the packet number */
-            $mask = substr(openssl_encrypt(
-                substr($packet, $pnOffset + 4, 16),
-                'aes-128-ecb',
-                $hp,
-                OPENSSL_RAW_DATA | OPENSSL_ZERO_PADDING
-            ), 0, 5);
+            $mask = self::hpMask($hp, $packet, $pnOffset);
             $packet[0] = chr(ord($packet[0]) ^ (ord($mask[0]) & 0x0f));
             for ($i = 0; $i < $pnLength; $i++) {
                 $packet[$pnOffset + $i] = chr(ord($packet[$pnOffset + $i]) ^ ord($mask[1 + $i]));
@@ -388,6 +383,349 @@ class ParamGenerator
             $packets[] = $packet;
         }
         return $packets;
+    }
+
+    /** client Initial keys of a destination connection id (RFC 9001 section 5.2): packet key, IV, header key */
+    private static function initialKeys(string $dcid)
+    {
+        $secret = hash_hmac('sha256', $dcid, hex2bin('38762cf7f55934b34d179ae6a4c80cadccbb7f0a'), true);
+        $secret = self::expandLabel($secret, 'client in', 32);
+        return [
+            self::expandLabel($secret, 'quic key', 16),
+            self::expandLabel($secret, 'quic iv', 12),
+            self::expandLabel($secret, 'quic hp', 16),
+        ];
+    }
+
+    /** header protection mask (RFC 9001 section 5.4.3), the sample starts 4 bytes after the packet number */
+    private static function hpMask(string $hp, string $packet, int $pnOffset)
+    {
+        return substr(openssl_encrypt(
+            substr($packet, $pnOffset + 4, 16),
+            'aes-128-ecb',
+            $hp,
+            OPENSSL_RAW_DATA | OPENSSL_ZERO_PADDING
+        ), 0, 5);
+    }
+
+    /** read a QUIC variable length integer at $pos and move $pos behind it */
+    private static function readVarint(string $data, int &$pos)
+    {
+        if ($pos >= strlen($data)) {
+            throw new \RuntimeException(gettext('The template ends in the middle of a packet.'));
+        }
+        $length = 1 << (ord($data[$pos]) >> 6);
+        $value = ord($data[$pos]) & 0x3f;
+        for ($i = 1; $i < $length; $i++) {
+            $value = ($value << 8) | ord($data[$pos + $i] ?? "\x00");
+        }
+        $pos += $length;
+        return $value;
+    }
+
+    /** random bytes, empty for a length of 0 (random_bytes() refuses it) */
+    private static function randomBytes(int $length)
+    {
+        return $length > 0 ? random_bytes($length) : '';
+    }
+
+    /** GREASE value of TLS (RFC 8701): 0x0a0a, 0x1a1a, ... 0xfafa */
+    private static function isGrease(int $value)
+    {
+        return ($value & 0x0f0f) === 0x0a0a && ($value >> 12) === (($value >> 4) & 0x0f);
+    }
+
+    /**
+     * Signature packets from a template: the client Initial packets a real browser sent at the start of a QUIC
+     * connection, pasted as hex (the UDP payload of each datagram, one per line, as Wireshark copies it). They are
+     * decrypted with the Initial keys of their connection id, the ClientHello is put together from its CRYPTO frames
+     * and gets the server name, a new random, session id, key shares, ECH GREASE bytes and connection ids; the
+     * extension order is shuffled when the template has GREASE (Chromium does that on every connection). The frames
+     * keep their layout (order, PING and PADDING, the way Chrome scatters the ClientHello), every datagram keeps its
+     * size, and the packets are encrypted again with the keys of a new connection id. So the fingerprint of the
+     * ClientHello is the one of that browser.
+     * @throws \RuntimeException with a message for the dialog when the template can not be used
+     */
+    private static function templateInitials(string $template, ?string $sni = null)
+    {
+        $sni = $sni ?? self::SNI[random_int(0, count(self::SNI) - 1)];
+        $datagrams = [];
+        foreach (preg_split('/[\s,;]+/', trim($template)) as $chunk) {
+            $chunk = preg_replace('/^0x/i', '', $chunk);
+            if ($chunk === '') {
+                continue;
+            }
+            if (!ctype_xdigit($chunk) || strlen($chunk) % 2 !== 0) {
+                throw new \RuntimeException(gettext('The template must be hex, one datagram per line.'));
+            }
+            $datagrams[] = hex2bin($chunk);
+        }
+        if (count($datagrams) < 1 || count($datagrams) > 5) {
+            throw new \RuntimeException(gettext('The template must hold one to five datagrams.'));
+        }
+
+        /* decrypt every packet and keep its layout */
+        $packets = [];
+        $stream = [];
+        $dcid = null;
+        foreach ($datagrams as $datagram) {
+            if (strlen($datagram) < 1200) {
+                /* RFC 9000 section 14.1: a client pads every datagram with an Initial packet to at least 1200 bytes */
+                throw new \RuntimeException(
+                    gettext('Every datagram must be at least 1200 bytes, copy the whole UDP payload.')
+                );
+            }
+            $b0 = ord($datagram[0]);
+            if (($b0 & 0xf0) !== 0xc0 || substr($datagram, 1, 4) !== "\x00\x00\x00\x01") {
+                throw new \RuntimeException(gettext('Every datagram must start with a QUIC version 1 Initial packet.'));
+            }
+            $pos = 5;
+            $id = substr($datagram, $pos + 1, ord($datagram[$pos]));
+            $pos += 1 + strlen($id);
+            $scid = substr($datagram, $pos + 1, ord($datagram[$pos]));
+            $pos += 1 + strlen($scid);
+            if (self::readVarint($datagram, $pos) !== 0) {
+                throw new \RuntimeException(
+                    gettext('The template has a token, capture the first connection to a new server.')
+                );
+            }
+            $lengthOffset = $pos;
+            $length = self::readVarint($datagram, $pos);
+            $pnOffset = $pos;
+            if ($dcid !== null && $id !== $dcid) {
+                throw new \RuntimeException(gettext('The datagrams belong to different connections.'));
+            }
+            $dcid = $id;
+            [$key, $iv, $hp] = self::initialKeys($dcid);
+            if ($pnOffset + $length > strlen($datagram) || $length < 20) {
+                throw new \RuntimeException(gettext('A packet is longer than its datagram.'));
+            }
+            $mask = self::hpMask($hp, $datagram, $pnOffset);
+            $first = chr($b0 ^ (ord($mask[0]) & 0x0f));
+            $pnLength = (ord($first) & 0x03) + 1;
+            $pnBytes = substr($datagram, $pnOffset, $pnLength) ^ substr($mask, 1, $pnLength);
+            $pn = (int)hexdec(bin2hex($pnBytes));
+            $header = $first . substr($datagram, 1, $pnOffset - 1) . $pnBytes;
+            $nonce = substr($iv, 0, 12 - 8) . (substr($iv, 4) ^ pack('J', $pn));
+            $sealed = substr($datagram, $pnOffset + $pnLength, $length - $pnLength);
+            $plain = openssl_decrypt(
+                substr($sealed, 0, -16),
+                'aes-128-gcm',
+                $key,
+                OPENSSL_RAW_DATA,
+                $nonce,
+                substr($sealed, -16),
+                $header
+            );
+            if ($plain === false) {
+                throw new \RuntimeException(
+                    gettext('A packet does not decrypt as a client Initial, copy the first packets of a connection.')
+                );
+            }
+            $trailer = substr($datagram, $pnOffset + $length);
+            if (trim($trailer, "\x00") !== '') {
+                throw new \RuntimeException(gettext('A datagram holds more than one packet, this is not supported.'));
+            }
+            $frames = [];
+            for ($i = 0; $i < strlen($plain);) {
+                $type = ord($plain[$i]);
+                if ($type === 0x00) {
+                    $run = strspn($plain, "\x00", $i);
+                    $frames[] = ['pad', $run];
+                    $i += $run;
+                } elseif ($type === 0x01) {
+                    $frames[] = ['ping'];
+                    $i++;
+                } elseif ($type === 0x06) {
+                    $i++;
+                    $offset = self::readVarint($plain, $i);
+                    $size = self::readVarint($plain, $i);
+                    $stream[$offset] = substr($plain, $i, $size);
+                    $frames[] = ['crypto', $offset, $size];
+                    $i += $size;
+                } else {
+                    throw new \RuntimeException(
+                        sprintf(gettext('Unexpected frame type %d in a client Initial.'), $type)
+                    );
+                }
+            }
+            $packets[] = [
+                'first' => $first, 'dcid' => $dcid, 'scid' => $scid, 'pn' => $pnBytes,
+                'length' => substr($datagram, $lengthOffset, $pnOffset - $lengthOffset),
+                'size' => strlen($plain), 'frames' => $frames, 'trailer' => $trailer,
+            ];
+        }
+        ksort($stream);
+        $hello = '';
+        foreach ($stream as $offset => $data) {
+            if ($offset > strlen($hello)) {
+                throw new \RuntimeException(
+                    gettext('The ClientHello is incomplete, paste all Initial datagrams of the client.')
+                );
+            }
+            $hello = substr($hello, 0, $offset) . $data . substr($hello, $offset + strlen($data));
+        }
+        if (
+            strlen($hello) < 4 || $hello[0] !== "\x01" ||
+            strlen($hello) !== 4 + hexdec(bin2hex(substr($hello, 1, 3)))
+        ) {
+            throw new \RuntimeException(
+                gettext('The ClientHello is incomplete, paste all Initial datagrams of the client.')
+            );
+        }
+
+        /* the ClientHello with new values */
+        $scidLength = strlen($packets[0]['scid']);
+        $newDcid = self::randomBytes(strlen($dcid));
+        $newScid = self::randomBytes($scidLength);
+        $pos = 4 + 2 + 32;
+        $sessionId = substr($hello, $pos + 1, ord($hello[$pos]));
+        $pos += 1 + strlen($sessionId);
+        $suites = substr($hello, $pos, 2 + unpack('n', substr($hello, $pos, 2))[1]);
+        $pos += strlen($suites);
+        $compression = substr($hello, $pos, 1 + ord($hello[$pos]));
+        $pos += strlen($compression);
+        $extensionsEnd = $pos + 2 + unpack('n', substr($hello, $pos, 2))[1];
+        $pos += 2;
+        $extensions = [];
+        $grease = false;
+        $named = false;
+        while ($pos + 4 <= $extensionsEnd) {
+            [$type, $size] = array_values(unpack('n2', substr($hello, $pos, 4)));
+            $data = substr($hello, $pos + 4, $size);
+            $pos += 4 + $size;
+            if (self::isGrease($type)) {
+                $grease = true;
+            } elseif ($type === 41 || $type === 42) {
+                throw new \RuntimeException(
+                    gettext('The template resumes an earlier session, capture the first connection to a new server.')
+                );
+            } elseif ($type === 0) {
+                $data = pack('n', strlen($sni) + 3) . "\x00" . pack('n', strlen($sni)) . $sni;
+                $named = true;
+            } elseif ($type === 51) {
+                $shares = '';
+                for ($i = 2; $i + 4 <= strlen($data);) {
+                    [$group, $length] = array_values(unpack('n2', substr($data, $i, 4)));
+                    $shares .= pack('nn', $group, $length) .
+                        (self::isGrease($group) ? substr($data, $i + 4, $length) : self::randomBytes($length));
+                    $i += 4 + $length;
+                }
+                $data = pack('n', strlen($shares)) . $shares;
+            } elseif ($type === 57) {
+                $params = '';
+                for ($i = 0; $i < strlen($data);) {
+                    $start = $i;
+                    $id = self::readVarint($data, $i);
+                    $length = self::readVarint($data, $i);
+                    $params .= $id === 0x0f ?
+                        self::varint($id) . self::varint($scidLength) . $newScid :
+                        substr($data, $start, $i - $start + $length);
+                    $i += $length;
+                }
+                $data = $params;
+            } elseif ($type === 0xfe0d && ($data[0] ?? '') === "\x00" && strlen($data) > 10) {
+                /* ECH GREASE: outer type, cipher suite, config id, enc and payload are random in a real one */
+                $encLength = unpack('n', substr($data, 6, 2))[1];
+                $payloadLength = unpack('n', substr($data, 8 + $encLength, 2))[1];
+                $data = substr($data, 0, 5) . self::randomBytes(1) .
+                    pack('n', $encLength) . self::randomBytes($encLength) .
+                    pack('n', $payloadLength) . self::randomBytes($payloadLength);
+            }
+            $extensions[] = [$type, $data];
+        }
+        if (!$named) {
+            throw new \RuntimeException(gettext('The ClientHello of the template has no server name.'));
+        }
+        if ($grease) {
+            /* Chromium shuffles its extensions on every connection, the GREASE ones keep their place */
+            $slots = array_keys(array_filter($extensions, fn($ext) => !self::isGrease($ext[0])));
+            $moved = array_map(fn($slot) => $extensions[$slot], $slots);
+            for ($i = count($moved) - 1; $i > 0; $i--) {
+                $j = random_int(0, $i);
+                [$moved[$i], $moved[$j]] = [$moved[$j], $moved[$i]];
+            }
+            foreach ($slots as $idx => $slot) {
+                $extensions[$slot] = $moved[$idx];
+            }
+        }
+        $body = "\x03\x03" . self::randomBytes(32) . chr(strlen($sessionId)) . self::randomBytes(strlen($sessionId)) .
+            $suites . $compression;
+        $block = implode('', array_map(fn($ext) => pack('nn', $ext[0], strlen($ext[1])) . $ext[1], $extensions));
+        $body .= pack('n', strlen($block)) . $block;
+        $newHello = "\x01" . substr(pack('N', strlen($body)), 1) . $body;
+
+        /* the frames keep their layout: every CRYPTO frame keeps its offset and length, except that the frame which
+         * ends the ClientHello takes the difference in length (a shorter one may reach back into the frames before) */
+        $ends = [];
+        foreach ($packets as $pi => $packet) {
+            foreach ($packet['frames'] as $fi => $frame) {
+                if ($frame[0] === 'crypto') {
+                    $ends["$pi:$fi"] = $frame[1] + $frame[2];
+                }
+            }
+        }
+        arsort($ends);
+        $sizes = [];
+        $delta = strlen($newHello) - strlen($hello);
+        foreach ($ends as $ref => $end) {
+            [$pi, $fi] = explode(':', $ref);
+            $sizes[$ref] = max(0, $packets[$pi]['frames'][$fi][2] + $delta);
+            $delta -= $sizes[$ref] - $packets[$pi]['frames'][$fi][2];
+        }
+        $result = [];
+        foreach ($packets as $pi => $packet) {
+            $payload = [];
+            $pads = [];
+            foreach ($packet['frames'] as $fi => $frame) {
+                if ($frame[0] === 'pad') {
+                    $pads[] = count($payload);
+                    $payload[] = $frame[1];
+                } elseif ($frame[0] === 'ping') {
+                    $payload[] = "\x01";
+                } elseif ($sizes["$pi:$fi"] > 0) {
+                    $payload[] = "\x06" . self::varint($frame[1]) . self::varint($sizes["$pi:$fi"]) .
+                        substr($newHello, $frame[1], $sizes["$pi:$fi"]);
+                }
+            }
+            /* the packet keeps its size: the padding takes up the difference, the longest run first */
+            $used = array_sum(array_map(fn($part) => is_int($part) ? $part : strlen($part), $payload));
+            $missing = $packet['size'] - $used;
+            if (!$pads) {
+                $pads[] = count($payload);
+                $payload[] = 0;
+            }
+            usort($pads, fn($a, $b) => $payload[$b] <=> $payload[$a]);
+            foreach ($pads as $idx) {
+                $change = max($missing, -$payload[$idx]);
+                $payload[$idx] += $change;
+                $missing -= $change;
+            }
+            if ($missing !== 0) {
+                throw new \RuntimeException(
+                    gettext('The server name is too long for this template, the packets have no room left.')
+                );
+            }
+            $plain = implode('', array_map(fn($part) => is_int($part) ? str_repeat("\x00", $part) : $part, $payload));
+
+            [$key, $iv, $hp] = self::initialKeys($newDcid);
+            $header = $packet['first'] . "\x00\x00\x00\x01" . chr(strlen($newDcid)) . $newDcid . chr($scidLength) .
+                $newScid . "\x00" . $packet['length'];
+            $pnOffset = strlen($header);
+            $header .= $packet['pn'];
+            $pn = (int)hexdec(bin2hex($packet['pn']));
+            $nonce = substr($iv, 0, 4) . (substr($iv, 4) ^ pack('J', $pn));
+            $tag = '';
+            $sealed = openssl_encrypt($plain, 'aes-128-gcm', $key, OPENSSL_RAW_DATA, $nonce, $tag, $header, 16);
+            $out = $header . $sealed . $tag;
+            $mask = self::hpMask($hp, $out, $pnOffset);
+            $out[0] = chr(ord($out[0]) ^ (ord($mask[0]) & 0x0f));
+            for ($i = 0; $i < strlen($packet['pn']); $i++) {
+                $out[$pnOffset + $i] = chr(ord($out[$pnOffset + $i]) ^ ord($mask[1 + $i]));
+            }
+            $result[] = $out . $packet['trailer'];
+        }
+        return $result;
     }
 
     /** SIP OPTIONS request (RFC 3261) */

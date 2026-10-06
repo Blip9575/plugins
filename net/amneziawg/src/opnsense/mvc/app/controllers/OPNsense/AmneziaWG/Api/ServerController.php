@@ -50,7 +50,8 @@ class ServerController extends ApiMutableModelControllerBase
      * nothing, random generates the parameters without a signature packet, a protocol (http3, quic, dns, ntp, stun, sip)
      * also sets I1 to a packet that imitates the start of a session of that protocol. The answer also carries the
      * listen port of the protocol and an MTU, and with the query parameter awg3=1 the AmneziaWG 3.x values of the
-     * profile.
+     * profile. The Initial packet template of the dialog comes in the POST body (template), see
+     * ParamGenerator::templateInitials().
      */
     public function genParamsAction($profile = 'random')
     {
@@ -74,9 +75,15 @@ class ServerController extends ApiMutableModelControllerBase
         }
 
         $awg3 = (string)$this->request->get('awg3', null, '0') === '1';
+        try {
+            $template = (string)$this->request->getPost('template', null, '');
+            $params = ParamGenerator::profile($profile, $sni, $awg3, $template);
+        } catch (\RuntimeException $e) {
+            return ['status' => 'failed', 'message' => $e->getMessage(), 'field' => 'quic_template'];
+        }
         return [
             'status' => 'ok',
-            'params' => ParamGenerator::profile($profile, $sni, $awg3),
+            'params' => $params,
             'sni' => (string)$sni,
             'sni_via' => $via,
         ];

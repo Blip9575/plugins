@@ -161,6 +161,15 @@
         </grid_view>
     </field>
     <field>
+        <id>server.quic_template</id>
+        <label>Initial packet template</label>
+        <type>textbox</type>
+        <help>Optional. The first client Initial datagrams of a real browser's HTTP/3 connection, as hex, one datagram per line (Wireshark: filter quic.long.packet_type == 0, then Copy as Hex Stream of the UDP payload; a current browser sends two). The gear then builds I1 and I2 from them: same ClientHello (so the same fingerprint as that browser), with the server name of the SNI source, a new random, new key shares and connection ids, and the same packet sizes. Capture a first connection to a server (no session resumption). Empty: the built-in ClientHello is used.</help>
+        <grid_view>
+            <ignore>true</ignore>
+        </grid_view>
+    </field>
+    <field>
         <id>server.jc</id>
         <label>Junk packet count (Jc)</label>
         <type>text</type>
