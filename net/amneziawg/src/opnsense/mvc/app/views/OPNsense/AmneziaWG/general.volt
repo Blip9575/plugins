@@ -115,8 +115,8 @@
                     /* the list holds the stored key of the profile, show its label and nothing for none */
                     awg2profile: function (column, row) {
                         const labels = {
-                            random: 'Random', http3: 'HTTP/3 (443)', http3linux: 'HTTP/3 (443) Linux', dns: 'DNS (53)',
-                            ntp: 'NTP (123)', stun: 'STUN (3478)', sip: 'SIP (5060)'
+                            random: 'Random', http3: 'HTTP/3 (443)', http3linux: 'HTTP/3 (443) bugfix #69',
+                            dns: 'DNS (53)', ntp: 'NTP (123)', stun: 'STUN (3478)', sip: 'SIP (5060)'
                         };
                         return labels[row[column.id]] || '';
                     }

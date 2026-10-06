@@ -53,7 +53,7 @@ class ParamGenerator
     /* imitated protocols with their usual UDP port, the dropdown of the instance dialog lists them as "DNS (53)" */
     public const PROTOCOLS = [
         'http3' => ['label' => 'HTTP/3', 'port' => '443'],
-        'http3linux' => ['label' => 'HTTP/3 Linux', 'port' => '443'],
+        'http3linux' => ['label' => 'HTTP/3 bugfix #69', 'port' => '443'],
         'dns' => ['label' => 'DNS', 'port' => '53'],
         'ntp' => ['label' => 'NTP', 'port' => '123'],
         'stun' => ['label' => 'STUN', 'port' => '3478'],
@@ -64,10 +64,11 @@ class ParamGenerator
     public const INITIAL = ['http3', 'http3linux'];
 
     /*
-     * Largest I1-I5 text (all five together) of the HTTP/3 Linux profile. awg on Linux (amneziawg-tools 3.1) writes
-     * the signature packets into a 4 KB netlink message without a bounds check and crashes (setconf) or can not read
-     * the interface back (show) above about 3700 characters with a full configuration and one peer
-     * (amneziawg-tools issue 69, fix proposed in pull request 73). One Initial of 1200-1232 bytes is 2406-2470.
+     * Largest I1-I5 text (all five together) of the HTTP/3 bugfix #69 profile (http3linux). awg on Linux
+     * (amneziawg-tools 3.1) writes the signature packets into a 4 KB netlink message without a bounds check and
+     * crashes (setconf) or can not read the interface back (show) above about 3700 characters with a full
+     * configuration and one peer (amneziawg-tools issue 69, fix proposed in pull request 73; the read side is
+     * amneziawg-linux-kernel-module issue 228). One Initial of 1200-1232 bytes is 2406-2470 characters.
      */
     public const LINUX_LIMIT = 3500;
 
@@ -139,7 +140,8 @@ class ParamGenerator
                 (count($packets) > 1 || strlen(implode('', $packets)) > self::LINUX_LIMIT)
             ) {
                 throw new \RuntimeException(gettext(
-                    'HTTP/3 Linux takes one Initial packet (awg on Linux can not load more), the template has more. ' .
+                    'HTTP/3 bugfix #69 takes one Initial packet (awg on Linux can not load more), ' .
+                    'the template has more. ' .
                     'Capture a browser that sends its ClientHello in one packet, or use HTTP/3.'
                 ));
             }
