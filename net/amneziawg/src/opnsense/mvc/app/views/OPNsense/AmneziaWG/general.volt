@@ -212,7 +212,9 @@
             if (!/^[0-9]+$/.test(String(port || ''))) {
                 return;
             }
-            ajaxGet('/api/amneziawg/server/port_users/' + port, {instance: $("#server\\.instance").val() || ''}, function (data, status) {
+            /* the instance number is an info field (a span), empty for a new instance or a copy */
+            const instance = $("#server\\.instance").text().trim();
+            ajaxGet('/api/amneziawg/server/port_users/' + port, {instance: instance}, function (data, status) {
                 if (data.users && data.users.length > 0) {
                     const $list = $("<ul></ul>");
                     $.each(data.users, function (idx, user) {
@@ -262,8 +264,13 @@
             }
         };
         $("#server\\.sni_source, #server\\.awg2_profile").on('change', awg_endpoint_sync);
-        $("#{{ formGridAmneziaWGServer['edit_dialog_id'] }}").on('opnsense_bootgrid_mapped', function () {
+        $("#{{ formGridAmneziaWGServer['edit_dialog_id'] }}").on('opnsense_bootgrid_mapped', function (e, action) {
             $("#server\\.endpoint").removeData('awg-default');
+            if (action === 'copy') {
+                /* a copy starts with the listen port of the instance it was made from (get_server clears its number,
+                 * endpoint and allowed IPs) */
+                awg_port_check($("#server\\.port").val());
+            }
             ajaxGet('/api/amneziawg/server/peer_defaults', {}, function (data, status) {
                 if (data.status !== 'ok') {
                     return;

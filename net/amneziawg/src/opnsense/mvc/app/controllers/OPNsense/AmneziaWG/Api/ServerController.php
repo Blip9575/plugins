@@ -189,7 +189,16 @@ class ServerController extends ApiMutableModelControllerBase
 
     public function getServerAction($uuid = null)
     {
-        return $this->getBase('server', 'servers.server', $uuid);
+        $result = $this->getBase('server', 'servers.server', $uuid);
+        if (!empty($result['server']) && $this->request->get('fetchmode') === 'copy') {
+            /* like core's OpenVPN instances: a copy gets its own instance number when saved, and the peer generator
+             * fields that belong to the copied instance (its port and tunnel network) are filled in again by the
+             * dialog */
+            $result['server']['instance'] = null;
+            $result['server']['endpoint'] = '';
+            $result['server']['allowed_ips'] = '';
+        }
+        return $result;
     }
 
     /**
