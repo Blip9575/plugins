@@ -32,6 +32,7 @@ namespace OPNsense\AmneziaWG\Api;
 use OPNsense\Base\ApiMutableModelControllerBase;
 use OPNsense\Core\Backend;
 use OPNsense\AmneziaWG\ParamGenerator;
+use OPNsense\AmneziaWG\PeerDefaults;
 use OPNsense\AmneziaWG\Server;
 use OPNsense\AmneziaWG\SniSource;
 
@@ -162,6 +163,20 @@ class ServerController extends ApiMutableModelControllerBase
             }
         }
         return ['status' => 'ok', 'users' => array_values(array_unique($users))];
+    }
+
+    /**
+     * defaults of the peer generator fields for the instance dialog: the WAN address (the endpoint is that address and
+     * the listen port), the DNS server and the allowed IPs
+     */
+    public function peerDefaultsAction()
+    {
+        return [
+            'status' => 'ok',
+            'address' => PeerDefaults::address(),
+            'peer_dns' => PeerDefaults::dns(),
+            'allowed_ips' => PeerDefaults::ALLOWED_IPS,
+        ];
     }
 
     public function searchServerAction()

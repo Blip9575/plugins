@@ -225,7 +225,35 @@
                 }
             });
         };
+        /* defaults of the peer generator fields: filled into empty fields when the dialog has its data, the endpoint
+         * (WAN address and listen port) follows the port as long as it still holds the value it was given */
+        let awg_wan = '';
+        const awg_endpoint_sync = function () {
+            const $endpoint = $("#server\\.endpoint");
+            if ($endpoint.val() === '' || $endpoint.val() === $endpoint.data('awg-default')) {
+                const port = String($("#server\\.port").val() || '').trim();
+                const value = awg_wan !== '' && port !== '' ? awg_wan + ':' + port : awg_wan;
+                $endpoint.val(value).data('awg-default', value);
+            }
+        };
+        $("#{{ formGridAmneziaWGServer['edit_dialog_id'] }}").on('opnsense_bootgrid_mapped', function () {
+            $("#server\\.endpoint").removeData('awg-default');
+            ajaxGet('/api/amneziawg/server/peer_defaults', {}, function (data, status) {
+                if (data.status !== 'ok') {
+                    return;
+                }
+                awg_wan = htmlDecode(data.address || '');
+                awg_endpoint_sync();
+                $.each({peer_dns: data.peer_dns, allowed_ips: data.allowed_ips}, function (field, value) {
+                    const $field = $("#server\\." + field);
+                    if ($field.val() === '' && value) {
+                        $field.val(htmlDecode(value));
+                    }
+                });
+            });
+        });
         $("#server\\.port").on('change', function (e) {
+            awg_endpoint_sync();
             /* typed by the user, not set by the form loader or the gear (they trigger no browser event) */
             if (e.originalEvent) {
                 awg_port_check($(this).val());
@@ -248,6 +276,7 @@
                             }
                         });
                         if (data.params.port) {
+                            awg_endpoint_sync();
                             awg_port_check(data.params.port);
                         }
                         if (url.indexOf('/gen_params/') !== -1) {
