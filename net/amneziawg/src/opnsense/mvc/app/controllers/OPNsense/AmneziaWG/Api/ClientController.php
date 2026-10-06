@@ -32,6 +32,7 @@ namespace OPNsense\AmneziaWG\Api;
 use OPNsense\Base\ApiMutableModelControllerBase;
 use OPNsense\Core\Config;
 use OPNsense\AmneziaWG\Server;
+use OPNsense\AmneziaWG\SniSource;
 use OPNsense\Core\Backend;
 use OPNsense\Firewall\Util;
 
@@ -169,6 +170,35 @@ class ClientController extends ApiMutableModelControllerBase
         return $this->setBase('configbuilder', 'clients.client', $uuid);
     }
 
+    /** WAN address and listen port of the instance, the address alone when the port is not fixed */
+    private function defaultEndpoint($port)
+    {
+        $address = SniSource::interfaceAddress('wan');
+        if ($address === null) {
+            return '';
+        }
+        if (strpos($address, ':') !== false) {
+            $address = '[' . $address . ']';
+        }
+        return $port !== '' ? $address . ':' . $port : $address;
+    }
+
+    /** the management address of the firewall on the LAN: its CARP address when there is one, else the LAN address */
+    private function defaultDns()
+    {
+        $config = Config::getInstance()->object();
+        foreach ($config->virtualip->vip ?? [] as $vip) {
+            if (
+                (string)$vip->mode === 'carp' && (string)$vip->interface === 'lan' &&
+                strpos((string)$vip->subnet, ':') === false
+            ) {
+                return (string)$vip->subnet;
+            }
+        }
+        $address = (string)($config->interfaces->lan->ipaddr ?? '');
+        return filter_var($address, FILTER_VALIDATE_IP) ? $address : (string)SniSource::interfaceAddress('lan');
+    }
+
     public function getServerInfoAction($uuid = null)
     {
         $result = ['status' => 'failed'];
@@ -180,8 +210,11 @@ class ClientController extends ApiMutableModelControllerBase
             foreach ((new Server())->servers->server->iterateItems() as $key => $node) {
                 if ($key == $uuid) {
                     $peers = array_filter(explode(',', (string)$node->peers));
-                    $result['endpoint'] = (string)$node->endpoint;
-                    $result['peer_dns'] = (string)$node->peer_dns;
+                    /* defaults of the peer generator when the instance has none stored, the user can change them */
+                    $result['endpoint'] = (string)$node->endpoint !== '' ?
+                        (string)$node->endpoint : $this->defaultEndpoint((string)$node->port);
+                    $result['peer_dns'] = (string)$node->peer_dns !== '' ?
+                        (string)$node->peer_dns : $this->defaultDns();
                     $result['allowed_ips'] = (string)$node->allowed_ips;
                     $result['mtu'] = (string)$node->mtu;
                     $result['pubkey'] = (string)$node->pubkey;

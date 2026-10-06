@@ -31,7 +31,7 @@ namespace OPNsense\AmneziaWG;
 use OPNsense\Core\Config;
 
 /**
- * Server name (SNI) for the HTTP/3 and QUIC signature packets. The source of an instance is
+ * Server name (SNI) for the HTTP/3 signature packets. The source of an instance is
  *  - "list":                    the built-in list of ParamGenerator, a random one (resolve() gives null), only when chosen
  *  - an interface (wan, lan...): reverse lookup of its address
  *  - an IP address:              reverse lookup of that address
@@ -53,8 +53,11 @@ class SniSource
         return $result;
     }
 
-    /** the first usable address of an interface: global IPv4, else global IPv6 */
-    private static function interfaceAddress($key)
+    /**
+     * the first usable address of an interface: global IPv4, else global IPv6 (also the default endpoint of the
+     * peer generator)
+     */
+    public static function interfaceAddress($key)
     {
         $device = (string)(Config::getInstance()->object()->interfaces->$key->if ?? '');
         if ($device === '') {

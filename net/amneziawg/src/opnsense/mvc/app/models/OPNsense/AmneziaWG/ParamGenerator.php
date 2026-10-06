@@ -53,7 +53,6 @@ class ParamGenerator
     /* imitated protocols with their usual UDP port, the dropdown of the instance dialog lists them as "DNS (53)" */
     public const PROTOCOLS = [
         'http3' => ['label' => 'HTTP/3', 'port' => '443'],
-        'quic' => ['label' => 'QUIC', 'port' => '443'],
         'dns' => ['label' => 'DNS', 'port' => '53'],
         'ntp' => ['label' => 'NTP', 'port' => '123'],
         'stun' => ['label' => 'STUN', 'port' => '3478'],
@@ -61,7 +60,7 @@ class ParamGenerator
     ];
 
     /* protocols whose signature packets are QUIC Initial packets */
-    public const INITIAL = ['http3', 'quic'];
+    public const INITIAL = ['http3'];
 
     /**
      * Server names for the TLS ClientHello inside the QUIC Initial packets, one is picked at random for each profile.
@@ -76,7 +75,7 @@ class ParamGenerator
     ];
 
     /**
-     * @param string $sni server name for the HTTP/3 and QUIC signature packets, a random one of SNI when not given
+     * @param string $sni server name for the HTTP/3 signature packets, a random one of SNI when not given
      */
     public static function awg2(string $protocol = '', ?string $sni = null, string $template = '')
     {
@@ -112,7 +111,7 @@ class ParamGenerator
             $result[$field] = '';
         }
         if (isset(self::PROTOCOLS[$protocol])) {
-            /* one signature packet per datagram: I1, and I2 when the protocol opens with two packets; HTTP/3 and QUIC
+            /* one signature packet per datagram: I1, and I2 when the protocol opens with two packets; HTTP/3
              * use the captured Initial packets of a real client instead of the built-in ClientHello when given */
             $packets = in_array($protocol, self::INITIAL, true) && trim($template) !== '' ?
                 array_map(fn($packet) => self::bytes($packet), self::templateInitials($template, $sni)) :
@@ -164,10 +163,10 @@ class ParamGenerator
     /**
      * Everything the gear of the instance dialog sets for a profile: the AmneziaWG 2.0 parameters, the listen port of
      * the protocol and an MTU, and with AmneziaWG 3.x a new header protection key and the 3.x values of the profile.
-     * MTU: 1280 for HTTP/3 and QUIC (QUIC sized packets), otherwise the value the kernel picks for this S4.
+     * MTU: 1280 for HTTP/3 (QUIC sized packets), otherwise the value the kernel picks for this S4.
      * 3.x: the signature packets are sent before every handshake, a longer rekey interval sends them less often in the
      * middle of a flow. Measured: the timers are seconds, and they must be the same on both ends or the server rekeys
-     * first and sends its own I1 (the peer generator copies them into the peer configuration). HTTP/3 and QUIC add
+     * first and sends its own I1 (the peer generator copies them into the peer configuration). HTTP/3 adds
      * a padding of 0-32 bytes to every packet; RandomTrailers stays off, the documentation recommends equal S1-S4
      * with it.
      * None of these values comes from the documentation, they are this plugin's choice.
@@ -263,12 +262,6 @@ class ParamGenerator
     private static function http3(?string $sni = null)
     {
         return array_map(fn($packet) => self::bytes($packet), self::quicInitials(0, true, $sni));
-    }
-
-    /** QUIC client of a general purpose library: a source connection id of 8 bytes, x25519 only, one Initial packet */
-    private static function quic(?string $sni = null)
-    {
-        return array_map(fn($packet) => self::bytes($packet), self::quicInitials(8, false, $sni));
     }
 
     /** QUIC variable length integer (RFC 9000 section 16) */

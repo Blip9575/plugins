@@ -134,7 +134,7 @@
         <id>server.awg2_profile</id>
         <label>AmneziaWG 2.0</label>
         <type>dropdown</type>
-        <help>Protocol to imitate when the gear button generates new parameters. Random generates the parameters without imitating a protocol. HTTP/3 (selected for a new instance) or QUIC is recommended for captive portal networks: no junk packets, handshake packets of the size of a QUIC Initial and MTU 1280. The gear also sets the listen port of the protocol and an MTU, and with AmneziaWG 3.x a new header protection key, RekeyAfterTime 300, RejectAfterTime 420 (the signature packets are sent before every handshake, so less often in the middle of a connection), a padding of 0-32 for HTTP/3 and QUIC, and RandomTrailers off. A warning shows when the port is already used. The parameters are shown in advanced mode, peers need the new configuration.</help>
+        <help>Protocol to imitate when the gear button generates new parameters. Random generates the parameters without imitating a protocol. HTTP/3 is recommended for captive portal networks: no junk packets, handshake packets of the size of a QUIC Initial and MTU 1280. Selecting a protocol also ticks Enable AmneziaWG 3.x (it needs amnezia-kmod and amnezia-tools 3.1). The gear sets the listen port of the protocol and an MTU, and with AmneziaWG 3.x a new header protection key, RekeyAfterTime 300, RejectAfterTime 420 (the signature packets are sent before every handshake, so less often in the middle of a connection), a padding of 0-32 for HTTP/3, and RandomTrailers off. A warning shows when the port is already used. The parameters are shown in advanced mode, peers need the new configuration.</help>
         <grid_view>
             <label>AWG 2.0</label>
             <formatter>awg2profile</formatter>
@@ -145,7 +145,7 @@
         <label>SNI source</label>
         <type>text</type>
         <style>net_selector</style>
-        <help>Where the server name in the TLS ClientHello of the HTTP/3 and QUIC signature packets comes from: the reverse lookup of the address of an interface (default WAN) or of an address, a host name as typed, or the built-in list. "Single host or Network" takes an address or a host name here. There is no fallback: when no name results, the entry switches to it and you enter the correct address or host name. Only used when the gear generates HTTP/3 or QUIC packets.</help>
+        <help>Where the server name in the TLS ClientHello of the HTTP/3 signature packets comes from: the reverse lookup of the address of an interface (default WAN) or of an address, a host name as typed, or the built-in list. "Single host or Network" takes an address or a host name here. There is no fallback: when no name results, the entry switches to it and you enter the correct address or host name. Only used when the gear generates HTTP/3 packets.</help>
         <grid_view>
             <ignore>true</ignore>
         </grid_view>
@@ -155,7 +155,7 @@
         <label>SNI of the packets</label>
         <type>text</type>
         <readonly>true</readonly>
-        <help>The server name in the HTTP/3 or QUIC signature packets that were generated last. It is filled by the gear, if you change I1 or I2 by hand it may no longer match.</help>
+        <help>The server name in the HTTP/3 signature packets that were generated last. It is filled by the gear, if you change I1 or I2 by hand it may no longer match.</help>
         <grid_view>
             <ignore>true</ignore>
         </grid_view>
@@ -452,7 +452,7 @@
         <id>server.endpoint</id>
         <label>Endpoint</label>
         <type>text</type>
-        <help>The endpoint that the instance will be reachable at, only used by the Peer generator.</help>
+        <help>The endpoint that the instance will be reachable at, only used by the Peer generator. Empty: the WAN address and the listen port.</help>
         <grid_view>
             <ignore>true</ignore>
         </grid_view>
@@ -461,7 +461,7 @@
         <id>server.peer_dns</id>
         <label>DNS Servers</label>
         <type>text</type>
-        <help>The DNS Servers to use when peers connect, only used by the Peer generator.</help>
+        <help>The DNS Servers to use when peers connect, only used by the Peer generator. Empty: the LAN address of the firewall (its CARP address when there is one). The DNS service must answer on it for the tunnel network.</help>
         <grid_view>
             <ignore>true</ignore>
         </grid_view>
@@ -470,7 +470,7 @@
         <id>server.allowed_ips</id>
         <label>Allowed IPs</label>
         <type>text</type>
-        <help>The Allowed IPs to use when peers connect, only used by the Peer generator.</help>
+        <help>The Allowed IPs to use when peers connect, only used by the Peer generator. Empty: 0.0.0.0/0,::/0 (all traffic, IPv6 is dropped unless the instance has an IPv6 tunnel address).</help>
         <grid_view>
             <ignore>true</ignore>
         </grid_view>

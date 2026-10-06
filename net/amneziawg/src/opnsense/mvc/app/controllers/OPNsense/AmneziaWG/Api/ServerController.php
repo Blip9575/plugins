@@ -47,7 +47,7 @@ class ServerController extends ApiMutableModelControllerBase
 
     /**
      * new random AmneziaWG 2.0 obfuscation parameters for the profile chosen in the instance dialog: none generates
-     * nothing, random generates the parameters without a signature packet, a protocol (http3, quic, dns, ntp, stun, sip)
+     * nothing, random generates the parameters without a signature packet, a protocol (http3, dns, ntp, stun, sip)
      * also sets I1 to a packet that imitates the start of a session of that protocol. The answer also carries the
      * listen port of the protocol and an MTU, and with the query parameter awg3=1 the AmneziaWG 3.x values of the
      * profile. The Initial packet template of the dialog comes in the POST body (template), see
@@ -64,7 +64,7 @@ class ServerController extends ApiMutableModelControllerBase
 
         $sni = null;
         $via = '';
-        if ($profile === 'http3' || $profile === 'quic') {
+        if (in_array($profile, ParamGenerator::INITIAL, true)) {
             /* the server name comes from the SNI source of the dialog (query parameter source), without a fallback */
             try {
                 [$sni, $via] = SniSource::resolve($this->request->get('source', null, 'wan'));
@@ -175,11 +175,10 @@ class ServerController extends ApiMutableModelControllerBase
     }
 
     /**
-     * The server name of the HTTP/3 and QUIC signature packets needs a source that gives a name (there is no fallback), so saving
-     * an instance with one of these protocols and signature packets resolves the source of that instance (the dialog
-     * preselects HTTP/3 for a new instance, which is fine as long as nothing was generated).
-     * This is not part of the model validation:
-     * instances saved before the source existed count as changed there, so every save would validate all of them.
+     * The server name of the HTTP/3 signature packets needs a source that gives a name (there is no fallback), so
+     * saving an HTTP/3 instance that has signature packets resolves the source of that instance (an instance with
+     * nothing generated yet is not checked). This is not part of the model validation: instances saved before the
+     * source existed count as changed there, so every save would validate all of them.
      * @return array|null the validation answer of the dialog, null when the source is fine or not used
      */
     protected function sniValidation()

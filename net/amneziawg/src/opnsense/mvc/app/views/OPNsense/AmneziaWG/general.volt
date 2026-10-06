@@ -115,7 +115,7 @@
                     /* the list holds the stored key of the profile, show its label and nothing for none */
                     awg2profile: function (column, row) {
                         const labels = {
-                            random: 'Random', http3: 'HTTP/3 (443)', quic: 'QUIC (443)', dns: 'DNS (53)',
+                            random: 'Random', http3: 'HTTP/3 (443)', dns: 'DNS (53)',
                             ntp: 'NTP (123)', stun: 'STUN (3478)', sip: 'SIP (5060)'
                         };
                         return labels[row[column.id]] || '';
@@ -169,9 +169,9 @@
         $("#server\\.s4, #server\\.contentpaddingaddition").on('input change', awg_header_update);
         $("#server\\.awg3_enabled").on('change', awg_header_update);
         $("#{{ formGridAmneziaWGServer['edit_dialog_id'] }}").on('shown.bs.modal', awg_header_update);
-        /* the server name rows only matter for the HTTP/3 and QUIC packets */
+        /* the server name rows only matter for the HTTP/3 packets */
         const awg_sni_rows = function () {
-            const quic = ['http3', 'quic'].includes($("#server\\.awg2_profile").val());
+            const quic = $("#server\\.awg2_profile").val() === 'http3';
             $("#row_server\\.sni_source, #row_server\\.sni_used, #row_server\\.quic_template").toggle(quic);
         };
         $("#server\\.awg2_profile").on('change', awg_sni_rows);
@@ -194,7 +194,7 @@
                 $("#server\\.sni_source").val('');
             }
         };
-        /* saving an HTTP/3 or QUIC instance checks the source too: when core marks the row with an error, show the box */
+        /* saving an HTTP/3 instance checks the source too: when core marks the row with an error, show the box */
         new MutationObserver(function () {
             if ($("#row_server\\.sni_source").hasClass('has-error')) {
                 awg_sni_manual();
@@ -229,13 +229,6 @@
             /* typed by the user, not set by the form loader or the gear (they trigger no browser event) */
             if (e.originalEvent) {
                 awg_port_check($(this).val());
-            }
-        });
-        /* a new instance starts with HTTP/3 selected, nothing is generated before the gear or a selection */
-        $("#{{ formGridAmneziaWGServer['edit_dialog_id'] }}").on('opnsense_bootgrid_mapped', function (e, action) {
-            if (action === 'add') {
-                $("#server\\.awg2_profile").val('http3').selectpicker('refresh');
-                awg_sni_rows();
             }
         });
         const awg_generate = function (url, message, on_cancel) {
@@ -309,12 +302,21 @@
             if (typeof clickedIndex !== 'number' || !profile || profile === 'none' || profile === previousValue) {
                 return;
             }
+            /* a protocol profile uses AmneziaWG 3.x: the box is ticked before the question, so the values include it */
+            const $awg3 = $("#server\\.awg3_enabled");
+            const awg3_before = $awg3.is(':checked');
+            if (profile !== 'random') {
+                $awg3.prop('checked', true);
+                awg_header_update();
+            }
             awg_generate(
                 awg_params_url(profile),
                 awg_params_message() + " {{ lang._('Cancel returns to the previous selection.') }}",
                 function () {
                     /* val() of selectpicker would fire the event again */
                     $("#server\\.awg2_profile").val(previousValue).selectpicker('refresh');
+                    $awg3.prop('checked', awg3_before);
+                    awg_header_update();
                 }
             );
         });
@@ -520,7 +522,7 @@
             try {
                 $("#configbuilder\\.qrcode").empty().qrcode(config);
             } catch (e) {
-                /* a QR code holds a few kilobytes, signature packets of the HTTP/3 and QUIC profiles can exceed that */
+                /* a QR code holds a few kilobytes, signature packets of the HTTP/3 profile can exceed that */
                 $("#configbuilder\\.qrcode").empty().append(
                     $("<p></p>").text(
                         "{{ lang._('This configuration is too large for a QR code') }} (" + new Blob([config]).size +
