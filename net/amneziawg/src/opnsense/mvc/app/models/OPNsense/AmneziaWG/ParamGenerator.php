@@ -107,9 +107,18 @@ class ParamGenerator
             $result['h' . ($idx + 1)] = $start . '-' . ($start + $width);
         }
 
-        foreach (['i1', 'i2', 'i3', 'i4', 'i5'] as $field) {
-            $result[$field] = '';
-        }
+        return $result + self::signature($protocol, $sni, $template);
+    }
+
+    /**
+     * The signature packets I1-I5 of a protocol, new ones on every call, empty without a protocol. Only the sender uses
+     * its signature packets (a handshake works with different ones on both ends), so the peer generator gives every
+     * peer configuration its own: one client's packets tell nothing about another's.
+     * @throws \RuntimeException when a template can not be used, see templateInitials()
+     */
+    public static function signature(string $protocol, ?string $sni = null, string $template = '')
+    {
+        $result = ['i1' => '', 'i2' => '', 'i3' => '', 'i4' => '', 'i5' => ''];
         if (isset(self::PROTOCOLS[$protocol])) {
             /* one signature packet per datagram: I1, and I2 when the protocol opens with two packets; HTTP/3
              * use the captured Initial packets of a real client instead of the built-in ClientHello when given */
@@ -120,7 +129,6 @@ class ParamGenerator
                 $result['i' . ($idx + 1)] = $packet;
             }
         }
-
         return $result;
     }
 

@@ -31,6 +31,7 @@ namespace OPNsense\AmneziaWG\Api;
 
 use OPNsense\Base\ApiMutableModelControllerBase;
 use OPNsense\Core\Config;
+use OPNsense\AmneziaWG\ParamGenerator;
 use OPNsense\AmneziaWG\Server;
 use OPNsense\Core\Backend;
 use OPNsense\Firewall\Util;
@@ -169,6 +170,32 @@ class ClientController extends ApiMutableModelControllerBase
         return $this->setBase('configbuilder', 'clients.client', $uuid);
     }
 
+    /**
+     * Signature packets of its own for a peer configuration: new I1-I5 of the instance's protocol profile, with the
+     * server name and the Initial packet template of the instance. Only the sender uses them, so every peer can have
+     * different ones. Null (the instance's own packets are used) without a protocol profile, without signature packets
+     * on the instance, for HTTP/3 without a stored server name, or when the template can not be used.
+     */
+    private function peerSignature($node)
+    {
+        $protocol = (string)$node->awg2_profile;
+        if (!isset(ParamGenerator::PROTOCOLS[$protocol]) || (string)$node->i1 === '') {
+            return null;
+        }
+        $sni = null;
+        if (in_array($protocol, ParamGenerator::INITIAL, true)) {
+            $sni = (string)$node->sni_used;
+            if ($sni === '') {
+                return null;
+            }
+        }
+        try {
+            return ParamGenerator::signature($protocol, $sni, (string)$node->quic_template);
+        } catch (\RuntimeException $e) {
+            return null;
+        }
+    }
+
     public function getServerInfoAction($uuid = null)
     {
         $result = ['status' => 'failed'];
@@ -185,15 +212,19 @@ class ClientController extends ApiMutableModelControllerBase
                     $result['allowed_ips'] = (string)$node->allowed_ips;
                     $result['mtu'] = (string)$node->mtu;
                     $result['pubkey'] = (string)$node->pubkey;
-                    /* config key => value, only for the options that are set */
+                    /* config key => value, only for the options that are set; the signature packets are new for
+                     * every peer configuration when the instance uses a protocol profile */
                     $result['awg'] = [];
+                    $signature = $this->peerSignature($node);
                     foreach (
                         ['jc' => 'Jc', 'jmin' => 'Jmin', 'jmax' => 'Jmax', 's1' => 'S1', 's2' => 'S2', 's3' => 'S3',
                          's4' => 'S4', 'h1' => 'H1', 'h2' => 'H2', 'h3' => 'H3', 'h4' => 'H4', 'i1' => 'I1',
                          'i2' => 'I2', 'i3' => 'I3', 'i4' => 'I4', 'i5' => 'I5'] as $field => $name
                     ) {
-                        if ((string)$node->$field !== '') {
-                            $result['awg'][$name] = (string)$node->$field;
+                        $value = $signature !== null && isset($signature[$field]) ?
+                            $signature[$field] : (string)$node->$field;
+                        if ($value !== '') {
+                            $result['awg'][$name] = $value;
                         }
                     }
                     /* the AmneziaWG 3.x options only count when they are enabled for the instance */

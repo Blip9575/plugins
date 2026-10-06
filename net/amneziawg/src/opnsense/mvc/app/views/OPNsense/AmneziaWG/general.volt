@@ -698,6 +698,16 @@
                         $("#configbuilder\\.privkey").val(data.privkey).change();
                     }
                 });
+                /* a new peer gets signature packets of its own (get_server_info makes new ones on every call) */
+                const server_id = $("#configbuilder\\.servers").val();
+                if (server_id) {
+                    ajaxGet('/api/amneziawg/client/get_server_info/' + server_id, {}, function (data, status) {
+                        if (data.status === 'ok') {
+                            $("#configbuilder\\.endpoint").data('awg', data.awg);
+                            configbuilder_update_config();
+                        }
+                    });
+                }
                 clearFormValidation("frm_config_builder");
             });
         }
