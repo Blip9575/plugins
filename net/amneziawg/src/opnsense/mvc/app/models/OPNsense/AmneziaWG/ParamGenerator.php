@@ -53,6 +53,7 @@ class ParamGenerator
     /* imitated protocols with their usual UDP port, the dropdown of the instance dialog lists them as "DNS (53)" */
     public const PROTOCOLS = [
         'http3' => ['label' => 'HTTP/3', 'port' => '443'],
+        'http3linux' => ['label' => 'HTTP/3 Linux', 'port' => '443'],
         'dns' => ['label' => 'DNS', 'port' => '53'],
         'ntp' => ['label' => 'NTP', 'port' => '123'],
         'stun' => ['label' => 'STUN', 'port' => '3478'],
@@ -60,7 +61,15 @@ class ParamGenerator
     ];
 
     /* protocols whose signature packets are QUIC Initial packets */
-    public const INITIAL = ['http3'];
+    public const INITIAL = ['http3', 'http3linux'];
+
+    /*
+     * Largest I1-I5 text (all five together) of the HTTP/3 Linux profile. awg on Linux (amneziawg-tools 3.1) writes
+     * the signature packets into a 4 KB netlink message without a bounds check and crashes (setconf) or can not read
+     * the interface back (show) above about 3700 characters with a full configuration and one peer
+     * (amneziawg-tools issue 69, fix proposed in pull request 73). One Initial of 1200-1232 bytes is 2406-2470.
+     */
+    public const LINUX_LIMIT = 3500;
 
     /**
      * Server names for the TLS ClientHello inside the QUIC Initial packets, one is picked at random for each profile.
@@ -125,6 +134,15 @@ class ParamGenerator
             $packets = in_array($protocol, self::INITIAL, true) && trim($template) !== '' ?
                 array_map(fn($packet) => self::bytes($packet), self::templateInitials($template, $sni)) :
                 (array)self::$protocol($sni);
+            if (
+                $protocol === 'http3linux' &&
+                (count($packets) > 1 || strlen(implode('', $packets)) > self::LINUX_LIMIT)
+            ) {
+                throw new \RuntimeException(gettext(
+                    'HTTP/3 Linux takes one Initial packet (awg on Linux can not load more), the template has more. ' .
+                    'Capture a browser that sends its ClientHello in one packet, or use HTTP/3.'
+                ));
+            }
             foreach (array_values($packets) as $idx => $packet) {
                 $result['i' . ($idx + 1)] = $packet;
             }
@@ -270,6 +288,15 @@ class ParamGenerator
     private static function http3(?string $sni = null)
     {
         return array_map(fn($packet) => self::bytes($packet), self::quicInitials(0, true, $sni));
+    }
+
+    /**
+     * HTTP/3 client for Linux peers: like http3() but with the x25519 key share only, so the ClientHello fits in one
+     * Initial packet (I1). awg on Linux can not load the two packets of http3() (see LINUX_LIMIT).
+     */
+    private static function http3linux(?string $sni = null)
+    {
+        return array_map(fn($packet) => self::bytes($packet), self::quicInitials(0, false, $sni));
     }
 
     /** QUIC variable length integer (RFC 9000 section 16) */

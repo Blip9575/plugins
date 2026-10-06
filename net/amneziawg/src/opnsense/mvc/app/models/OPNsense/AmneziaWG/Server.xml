@@ -80,6 +80,7 @@
                         <none value="none">Select UDP protocol to mimic</none>
                         <random value="random">Random</random>
                         <http3 value="http3">HTTP/3 (443)</http3>
+                        <http3linux value="http3linux">HTTP/3 (443) Linux</http3linux>
                         <dns value="dns">DNS (53)</dns>
                         <ntp value="ntp">NTP (123)</ntp>
                         <stun value="stun">STUN (3478)</stun>

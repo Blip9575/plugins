@@ -115,7 +115,7 @@
                     /* the list holds the stored key of the profile, show its label and nothing for none */
                     awg2profile: function (column, row) {
                         const labels = {
-                            random: 'Random', http3: 'HTTP/3 (443)', dns: 'DNS (53)',
+                            random: 'Random', http3: 'HTTP/3 (443)', http3linux: 'HTTP/3 (443) Linux', dns: 'DNS (53)',
                             ntp: 'NTP (123)', stun: 'STUN (3478)', sip: 'SIP (5060)'
                         };
                         return labels[row[column.id]] || '';
@@ -169,9 +169,11 @@
         $("#server\\.s4, #server\\.contentpaddingaddition").on('input change', awg_header_update);
         $("#server\\.awg3_enabled").on('change', awg_header_update);
         $("#{{ formGridAmneziaWGServer['edit_dialog_id'] }}").on('shown.bs.modal', awg_header_update);
+        /* the profiles whose signature packets are QUIC Initial packets (ParamGenerator::INITIAL) */
+        const awg_initial = ['http3', 'http3linux'];
         /* the server name rows only matter for the HTTP/3 packets */
         const awg_sni_rows = function () {
-            const quic = $("#server\\.awg2_profile").val() === 'http3';
+            const quic = awg_initial.includes($("#server\\.awg2_profile").val());
             $("#row_server\\.sni_source, #row_server\\.sni_used, #row_server\\.quic_template").toggle(quic);
         };
         $("#server\\.awg2_profile").on('change', awg_sni_rows);
@@ -234,7 +236,7 @@
         let awg_builtin = [];
         const awg_endpoint_host = function () {
             const source = String($("#server\\.sni_source").val() || '').trim();
-            if ($("#server\\.awg2_profile").val() !== 'http3' || source === '' || source === 'list') {
+            if (!awg_initial.includes($("#server\\.awg2_profile").val()) || source === '' || source === 'list') {
                 return awg_wan;   /* the built-in names are not this firewall */
             } else if (/^[0-9.]+$/.test(source)) {
                 return source;
