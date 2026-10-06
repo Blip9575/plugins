@@ -201,16 +201,58 @@
             }
         }).observe($("#row_server\\.sni_source")[0], {attributes: true, attributeFilter: ['class']});
         const awg_params_url = function (profile) {
-            return "/api/amneziawg/server/gen_params/" + profile + "?source=" + encodeURIComponent($("#server\\.sni_source").val() || '');
+            return "/api/amneziawg/server/gen_params/" + profile + "?source=" + encodeURIComponent($("#server\\.sni_source").val() || '') +
+                "&awg3=" + ($("#server\\.awg3_enabled").is(':checked') ? '1' : '0');
         };
+        /* another instance or a local service on the same UDP port: a warning, the user resolves it */
+        const awg_port_check = function (port) {
+            if (!/^[0-9]+$/.test(String(port || ''))) {
+                return;
+            }
+            ajaxGet('/api/amneziawg/server/port_users/' + port, {instance: $("#server\\.instance").val() || ''}, function (data, status) {
+                if (data.users && data.users.length > 0) {
+                    const $list = $("<ul></ul>");
+                    $.each(data.users, function (idx, user) {
+                        $list.append($("<li></li>").text(htmlDecode(user)));
+                    });
+                    stdDialogInform(
+                        "{{ lang._('Listen port in use') }}",
+                        $("<div></div>").append($("<p></p>").text("{{ lang._('UDP port %s is also used by:') }}".replace('%s', port))).append($list)
+                            .append($("<p></p>").text("{{ lang._('Only one of them can receive the traffic. Choose another listen port here or change the other one.') }}")),
+                        "{{ lang._('Close') }}", undefined, "warning"
+                    );
+                }
+            });
+        };
+        $("#server\\.port").on('change', function (e) {
+            /* typed by the user, not set by the form loader or the gear (they trigger no browser event) */
+            if (e.originalEvent) {
+                awg_port_check($(this).val());
+            }
+        });
+        /* a new instance starts with HTTP/3 selected, nothing is generated before the gear or a selection */
+        $("#{{ formGridAmneziaWGServer['edit_dialog_id'] }}").on('opnsense_bootgrid_mapped', function (e, action) {
+            if (action === 'add') {
+                $("#server\\.awg2_profile").val('http3').selectpicker('refresh');
+                awg_sni_rows();
+            }
+        });
         const awg_generate = function (url, message, on_cancel) {
             const apply = function () {
                 ajaxGet(url, {}, function (data, status) {
                     if (data.status && data.status === 'ok') {
                         $.each(data.params, function (field, value) {
-                            /* the response is HTML escaped for the browser, I1 contains angle brackets */
-                            $("#server\\." + field).val(htmlDecode(value));
+                            const $field = $("#server\\." + field);
+                            if ($field.is(':checkbox')) {
+                                $field.prop('checked', value === '1');
+                            } else {
+                                /* the response is HTML escaped for the browser, I1 contains angle brackets */
+                                $field.val(htmlDecode(value));
+                            }
                         });
+                        if (data.params.port) {
+                            awg_port_check(data.params.port);
+                        }
                         if (url.indexOf('/gen_params/') !== -1) {
                             $("#server\\.sni_used").val(htmlDecode(data.sni || ''));
                         }
@@ -244,6 +286,14 @@
                 }
             });
         };
+        /* what the gear replaces for the selected profile, for the confirmation */
+        const awg_params_message = function () {
+            let message = "{{ lang._('Generate new parameters? The AmneziaWG 2.0 parameters (Jc, Jmin, Jmax, S1-S4, H1-H4 and I1-I5), the listen port of the protocol and the MTU are replaced.') }}";
+            if ($("#server\\.awg3_enabled").is(':checked')) {
+                message += " {{ lang._('AmneziaWG 3.x is enabled: the header protection key, RekeyAfterTime, RejectAfterTime, ContentPaddingAddition and RandomTrailers are replaced too.') }}";
+            }
+            return message + " {{ lang._('A changed listen port needs a matching firewall rule.') }}";
+        };
         /* a new protocol needs matching parameters, a user selection asks for them, cancelling keeps the old selection */
         $("#server\\.awg2_profile").on('changed.bs.select', function (e, clickedIndex, isSelected, previousValue) {
             const profile = $(this).val();
@@ -253,7 +303,7 @@
             }
             awg_generate(
                 awg_params_url(profile),
-                "{{ lang._('Generate new parameters? The AmneziaWG 2.0 parameters (Jc, Jmin, Jmax, S1-S4, H1-H4 and I1-I5) are replaced. Cancel returns to the previous selection.') }}",
+                awg_params_message() + " {{ lang._('Cancel returns to the previous selection.') }}",
                 function () {
                     /* val() of selectpicker would fire the event again */
                     $("#server\\.awg2_profile").val(previousValue).selectpicker('refresh');
@@ -272,7 +322,7 @@
             }
             awg_generate(
                 awg_params_url(profile),
-                "{{ lang._('Generate new parameters? The AmneziaWG 2.0 parameters (Jc, Jmin, Jmax, S1-S4, H1-H4 and I1-I5) are replaced.') }}"
+                awg_params_message()
             );
         });
         /* click, not change: loading the form sets the box without a click. Ticking and clearing both change what the instance sends,
@@ -285,8 +335,8 @@
                     return isNaN(value) || value < 12;
                 });
                 awg_generate(
-                    "/api/amneziawg/server/gen_params3/" + (need_prefixes ? '1' : '0'),
-                    "{{ lang._('Generate new parameters now? A new header protection key is generated, and S1-S4 when they are below 12. Existing values are replaced.') }}"
+                    "/api/amneziawg/server/gen_params3/" + (need_prefixes ? '1' : '0') + "?profile=" + encodeURIComponent($("#server\\.awg2_profile").val() || 'none'),
+                    "{{ lang._('Generate new parameters now? A new header protection key is generated, and S1-S4 when they are below 12. With a profile selected, RekeyAfterTime, RejectAfterTime, ContentPaddingAddition and RandomTrailers are set for it. Existing values are replaced.') }}"
                 );
             } else {
                 const profile = $("#server\\.awg2_profile").val();

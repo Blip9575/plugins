@@ -60,6 +60,9 @@ class ParamGenerator
         'sip' => ['label' => 'SIP', 'port' => '5060'],
     ];
 
+    /* protocols whose signature packets are QUIC Initial packets */
+    public const INITIAL = ['http3', 'quic'];
+
     /**
      * Server names for the TLS ClientHello inside the QUIC Initial packets, one is picked at random for each profile.
      * This list is a choice of this plugin, no official source gives one: large, widely used hosts that mobile devices
@@ -77,13 +80,19 @@ class ParamGenerator
      */
     public static function awg2(string $protocol = '', ?string $sni = null)
     {
-        $result = [
-            'jc' => (string)random_int(3, 10),
-            'jmin' => (string)random_int(6, 10),
-            'jmax' => (string)random_int(60, 100),
-        ];
-
-        $result += self::prefixes();
+        if (in_array($protocol, self::INITIAL, true)) {
+            /* a QUIC client sends nothing between its Initial packets and the server's answer: no junk packets, and
+             * the handshake initiation (148 + S1) and the response (92 + S2) get the size of an Initial (1200-1232) */
+            $result = ['jc' => '0', 'jmin' => '', 'jmax' => ''];
+            $result += self::prefixes(true);
+        } else {
+            $result = [
+                'jc' => (string)random_int(3, 10),
+                'jmin' => (string)random_int(6, 10),
+                'jmax' => (string)random_int(60, 100),
+            ];
+            $result += self::prefixes();
+        }
 
         /* one range in each quarter of the span, handed out in random order, so they can not overlap */
         $quarter = intdiv(self::H_HIGH - self::H_LOW, 4);
@@ -114,12 +123,14 @@ class ParamGenerator
 
     /**
      * Random prefix sizes S1-S4 (awg(8): S1/S2/S3 15-150 and S4 15-32), S1, S2 and S3 differ from each other and
-     * S1 + 56 is not S2. Header protection needs S1-S4 of at least 12, these are always above that.
+     * S1 + 56 is not S2. Header protection needs S1-S4 of at least 12, these are always above that. With $initial
+     * the handshake packets get the size of a QUIC Initial: S1 1052-1084 and S2 1108-1140 (kernel limits 1304, 1360).
      */
-    public static function prefixes()
+    public static function prefixes(bool $initial = false)
     {
         do {
-            $s = [random_int(15, 150), random_int(15, 150), random_int(15, 150)];
+            $s = $initial ? [random_int(1052, 1084), random_int(1108, 1140), random_int(15, 150)] :
+                [random_int(15, 150), random_int(15, 150), random_int(15, 150)];
             $ok = count(array_unique($s)) === 3 && $s[0] + 56 !== $s[1];
         } while (!$ok);
 
@@ -144,6 +155,48 @@ class ParamGenerator
         $result = ['headerprotectionkey' => base64_encode($key)];
 
         return $withPrefixes ? $result + self::prefixes() : $result;
+    }
+
+    /**
+     * Everything the gear of the instance dialog sets for a profile: the AmneziaWG 2.0 parameters, the listen port of
+     * the protocol and an MTU, and with AmneziaWG 3.x a new header protection key and the 3.x values of the profile.
+     * MTU: 1280 for HTTP/3 and QUIC (QUIC sized packets), otherwise the value the kernel picks for this S4.
+     * 3.x: the signature packets are sent before every handshake, a longer rekey interval sends them less often in the
+     * middle of a flow. Measured: the timers are seconds, and they must be the same on both ends or the server rekeys
+     * first and sends its own I1 (the peer generator copies them into the peer configuration). HTTP/3 and QUIC add
+     * a padding of 0-32 bytes to every packet; RandomTrailers stays off, the documentation recommends equal S1-S4
+     * with it.
+     * None of these values comes from the documentation, they are this plugin's choice.
+     */
+    public static function profile(string $protocol, ?string $sni = null, bool $awg3 = false)
+    {
+        $result = self::awg2($protocol, $sni);
+        if (isset(self::PROTOCOLS[$protocol])) {
+            $result['port'] = self::PROTOCOLS[$protocol]['port'];
+        }
+        $result['mtu'] = in_array($protocol, self::INITIAL, true) ?
+            '1280' : (string)self::kernelMtu((int)$result['s4']);
+        return $awg3 ? $result + self::awg3() + self::awg3Values($protocol) : $result;
+    }
+
+    /** the AmneziaWG 3.x values of a profile besides the key, see profile() */
+    public static function awg3Values(string $protocol)
+    {
+        return [
+            'rekeyaftertime' => '300',
+            'rejectaftertime' => '420',
+            'contentpaddingaddition' => in_array($protocol, self::INITIAL, true) ? '0-32' : '',
+            'randomtrailers' => '0',
+        ];
+    }
+
+    /**
+     * The MTU amnezia-kmod 3.1.0 gives an interface without a fixed MTU, measured on a 1500 byte path: 1420 when S4 is
+     * at most 12, then 16 bytes less for every 16 bytes of S4 (see the notes of this plugin, header size)
+     */
+    public static function kernelMtu(int $s4)
+    {
+        return $s4 <= 12 ? 1420 : 1408 - 16 * intdiv($s4 - 13, 16);
     }
 
     /** static bytes tag */

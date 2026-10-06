@@ -32,6 +32,7 @@ namespace OPNsense\AmneziaWG\Api;
 use OPNsense\Base\ApiMutableModelControllerBase;
 use OPNsense\Core\Backend;
 use OPNsense\AmneziaWG\ParamGenerator;
+use OPNsense\AmneziaWG\Server;
 use OPNsense\AmneziaWG\SniSource;
 
 class ServerController extends ApiMutableModelControllerBase
@@ -47,7 +48,9 @@ class ServerController extends ApiMutableModelControllerBase
     /**
      * new random AmneziaWG 2.0 obfuscation parameters for the profile chosen in the instance dialog: none generates
      * nothing, random generates the parameters without a signature packet, a protocol (http3, quic, dns, ntp, stun, sip)
-     * also sets I1 to a packet that imitates the start of a session of that protocol
+     * also sets I1 to a packet that imitates the start of a session of that protocol. The answer also carries the
+     * listen port of the protocol and an MTU, and with the query parameter awg3=1 the AmneziaWG 3.x values of the
+     * profile.
      */
     public function genParamsAction($profile = 'random')
     {
@@ -70,7 +73,13 @@ class ServerController extends ApiMutableModelControllerBase
             $sni = $sni ?? ParamGenerator::SNI[random_int(0, count(ParamGenerator::SNI) - 1)];
         }
 
-        return ['status' => 'ok', 'params' => ParamGenerator::awg2($profile, $sni), 'sni' => (string)$sni, 'sni_via' => $via];
+        $awg3 = (string)$this->request->get('awg3', null, '0') === '1';
+        return [
+            'status' => 'ok',
+            'params' => ParamGenerator::profile($profile, $sni, $awg3),
+            'sni' => (string)$sni,
+            'sni_via' => $via,
+        ];
     }
 
     /**
@@ -90,13 +99,62 @@ class ServerController extends ApiMutableModelControllerBase
     }
 
     /**
-     * new AmneziaWG 3.x parameters for the "Enable AmneziaWG 3.x" box of the instance dialog: a header protection key.
+     * new AmneziaWG 3.x parameters for the "Enable AmneziaWG 3.x" box of the instance dialog: a header protection key,
+     * and the 3.x values of the profile in the query parameter profile (none: the key only).
      * With prefixes set to 1 the S1-S4 prefix sizes are included too, the dialog asks for them when S1-S4 are empty or
      * below the 12 that header protection requires
      */
     public function genParams3Action($prefixes = '0')
     {
-        return ['status' => 'ok', 'params' => ParamGenerator::awg3((string)$prefixes === '1')];
+        $params = ParamGenerator::awg3((string)$prefixes === '1');
+        $profile = strtolower((string)$this->request->get('profile', null, 'none'));
+        if ($profile === 'random' || isset(ParamGenerator::PROTOCOLS[$profile])) {
+            $params += ParamGenerator::awg3Values($profile);
+        }
+        return ['status' => 'ok', 'params' => $params];
+    }
+
+    /**
+     * what else uses a UDP port on this firewall, for the warning of the instance dialog: other AmneziaWG instances
+     * (the query parameter instance is the one in the dialog), core WireGuard instances and local services. Nothing
+     * is blocked, the user decides.
+     */
+    public function portUsersAction($port = '')
+    {
+        $users = [];
+        if (!ctype_digit((string)$port) || (int)$port < 1 || (int)$port > 65535) {
+            return ['status' => 'failed', 'users' => $users];
+        }
+        $self = (string)$this->request->get('instance', null, '');
+        foreach ((new Server())->servers->server->iterateItems() as $node) {
+            if ((string)$node->port === (string)$port && (string)$node->instance !== $self) {
+                $users[] = sprintf(
+                    gettext('AmneziaWG instance %s (awg%s)'),
+                    (string)$node->name,
+                    (string)$node->instance
+                );
+            }
+        }
+        if (class_exists('\OPNsense\Wireguard\Server')) {
+            foreach ((new \OPNsense\Wireguard\Server())->servers->server->iterateItems() as $node) {
+                if ((string)$node->port === (string)$port) {
+                    $users[] = sprintf(
+                        gettext('WireGuard instance %s (wg%s)'),
+                        (string)$node->name,
+                        (string)$node->instance
+                    );
+                }
+            }
+        }
+        /* local services; tunnel sockets belong to the kernel and show as ?? */
+        exec('/usr/bin/sockstat -46 -l -P udp -p ' . (int)$port . ' 2> /dev/null', $lines);
+        foreach (array_slice($lines, 1) as $line) {
+            $fields = preg_split('/\s+/', trim($line));
+            if (count($fields) > 1 && $fields[1] !== '??') {
+                $users[] = sprintf(gettext('the service %s'), $fields[1]);
+            }
+        }
+        return ['status' => 'ok', 'users' => array_values(array_unique($users))];
     }
 
     public function searchServerAction()
@@ -111,14 +169,19 @@ class ServerController extends ApiMutableModelControllerBase
 
     /**
      * The server name of the HTTP/3 and QUIC signature packets needs a source that gives a name (there is no fallback), so saving
-     * an instance with one of these protocols resolves the source of that instance. This is not part of the model validation:
+     * an instance with one of these protocols and signature packets resolves the source of that instance (the dialog
+     * preselects HTTP/3 for a new instance, which is fine as long as nothing was generated).
+     * This is not part of the model validation:
      * instances saved before the source existed count as changed there, so every save would validate all of them.
      * @return array|null the validation answer of the dialog, null when the source is fine or not used
      */
     protected function sniValidation()
     {
         $post = $this->request->getPost('server');
-        if (is_array($post) && in_array($post['awg2_profile'] ?? '', ['http3', 'quic'], true)) {
+        if (
+            is_array($post) && in_array($post['awg2_profile'] ?? '', ParamGenerator::INITIAL, true) &&
+            trim((string)($post['i1'] ?? '')) !== ''
+        ) {
             try {
                 SniSource::resolve((string)($post['sni_source'] ?? ''));
             } catch (\RuntimeException $e) {

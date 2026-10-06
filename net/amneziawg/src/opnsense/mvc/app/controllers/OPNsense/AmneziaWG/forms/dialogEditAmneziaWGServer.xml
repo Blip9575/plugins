@@ -134,7 +134,7 @@
         <id>server.awg2_profile</id>
         <label>AmneziaWG 2.0</label>
         <type>dropdown</type>
-        <help>Protocol to imitate when the gear button generates new parameters. Random generates the parameters without imitating a protocol. HTTP/3 or QUIC is recommended for captive portal networks. The parameters are shown in advanced mode, peers need the new configuration.</help>
+        <help>Protocol to imitate when the gear button generates new parameters. Random generates the parameters without imitating a protocol. HTTP/3 (selected for a new instance) or QUIC is recommended for captive portal networks: no junk packets, handshake packets of the size of a QUIC Initial and MTU 1280. The gear also sets the listen port of the protocol and an MTU, and with AmneziaWG 3.x a new header protection key, RekeyAfterTime 300, RejectAfterTime 420 (the signature packets are sent before every handshake, so less often in the middle of a connection), a padding of 0-32 for HTTP/3 and QUIC, and RandomTrailers off. A warning shows when the port is already used. The parameters are shown in advanced mode, peers need the new configuration.</help>
         <grid_view>
             <label>AWG 2.0</label>
             <formatter>awg2profile</formatter>
