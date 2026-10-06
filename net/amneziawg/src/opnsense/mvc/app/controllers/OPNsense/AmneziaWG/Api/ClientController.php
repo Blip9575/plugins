@@ -32,7 +32,6 @@ namespace OPNsense\AmneziaWG\Api;
 use OPNsense\Base\ApiMutableModelControllerBase;
 use OPNsense\Core\Config;
 use OPNsense\AmneziaWG\Server;
-use OPNsense\AmneziaWG\PeerDefaults;
 use OPNsense\Core\Backend;
 use OPNsense\Firewall\Util;
 
@@ -181,11 +180,8 @@ class ClientController extends ApiMutableModelControllerBase
             foreach ((new Server())->servers->server->iterateItems() as $key => $node) {
                 if ($key == $uuid) {
                     $peers = array_filter(explode(',', (string)$node->peers));
-                    /* defaults of the peer generator when the instance has none stored, the user can change them */
-                    $result['endpoint'] = (string)$node->endpoint !== '' ?
-                        (string)$node->endpoint : PeerDefaults::endpoint((string)$node->port);
-                    $result['peer_dns'] = (string)$node->peer_dns !== '' ?
-                        (string)$node->peer_dns : PeerDefaults::dns();
+                    $result['endpoint'] = (string)$node->endpoint;
+                    $result['peer_dns'] = (string)$node->peer_dns;
                     $result['allowed_ips'] = (string)$node->allowed_ips;
                     $result['mtu'] = (string)$node->mtu;
                     $result['pubkey'] = (string)$node->pubkey;

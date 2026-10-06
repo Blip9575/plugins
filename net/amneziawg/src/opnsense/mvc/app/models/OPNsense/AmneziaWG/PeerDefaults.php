@@ -31,8 +31,8 @@ namespace OPNsense\AmneziaWG;
 use OPNsense\Core\Config;
 
 /**
- * Defaults of the peer generator fields of an instance (endpoint, DNS, allowed IPs), used when the instance stores none.
- * The instance dialog fills them in, the user can change them.
+ * Defaults of the peer generator fields of an instance (endpoint, DNS, allowed IPs): the instance dialog fills them
+ * into empty fields, the user can change them and saving stores them. The peer generator uses what is stored.
  */
 class PeerDefaults
 {

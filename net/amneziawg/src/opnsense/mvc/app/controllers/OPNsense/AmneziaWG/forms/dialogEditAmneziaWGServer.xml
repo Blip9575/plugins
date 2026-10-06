@@ -452,7 +452,7 @@
         <id>server.endpoint</id>
         <label>Endpoint</label>
         <type>text</type>
-        <help>The endpoint that the instance will be reachable at, only used by the Peer generator. Empty: the WAN address and the listen port.</help>
+        <help>The endpoint that the instance will be reachable at, only used by the Peer generator. When empty, this dialog fills in the WAN address and the listen port.</help>
         <grid_view>
             <ignore>true</ignore>
         </grid_view>
@@ -461,7 +461,7 @@
         <id>server.peer_dns</id>
         <label>DNS Servers</label>
         <type>text</type>
-        <help>The DNS Servers to use when peers connect, only used by the Peer generator. Empty: the LAN address of the firewall (its CARP address when there is one). The DNS service must answer on it for the tunnel network.</help>
+        <help>The DNS Servers to use when peers connect, only used by the Peer generator. When empty, this dialog fills in the LAN address of the firewall (its CARP address when there is one). The DNS service must answer on it for the tunnel network.</help>
         <grid_view>
             <ignore>true</ignore>
         </grid_view>
@@ -470,7 +470,7 @@
         <id>server.allowed_ips</id>
         <label>Allowed IPs</label>
         <type>text</type>
-        <help>The Allowed IPs to use when peers connect, only used by the Peer generator. Empty: 0.0.0.0/0,::/0 (all traffic, IPv6 is dropped unless the instance has an IPv6 tunnel address).</help>
+        <help>The Allowed IPs to use when peers connect, only used by the Peer generator. When empty, this dialog fills in 0.0.0.0/0,::/0 (all traffic, IPv6 is dropped unless the instance has an IPv6 tunnel address).</help>
         <grid_view>
             <ignore>true</ignore>
         </grid_view>
