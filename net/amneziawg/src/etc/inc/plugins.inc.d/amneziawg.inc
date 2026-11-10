@@ -112,10 +112,11 @@ function amneziawg_devices()
     }
     return [[
         'function' => 'amneziawg_prepare', /* XXX only (empty) device creation */
+        'typedescr' => gettext('AmneziaWG'),
         'configurable' => false,
-        'pattern' => '^awg',
         'type' => 'amneziawg',
         'volatile' => true,
+        'pattern' => '^awg',
         'names' => $names,
     ]];
 }
